@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# IDEA
+.idea/
+
+# cmake debug
+cmake-build-debug-*/
+
+config_file.md
+deve_plan.md
