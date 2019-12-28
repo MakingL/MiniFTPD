@@ -65,10 +65,29 @@ void CLCommandHandle::do_pass() {
 
 void CLCommandHandle::do_cwd() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_cwd()");
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Need target path name.", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    if (chdir(cmd_argv.c_str()) < 0) {
+        reply_client("%d Failed to change directory!", ftp_response_code::kFTP_NOPERM);
+    } else {
+        reply_client("%d Working directory changed to \"%s\"", ftp_response_code::kFTP_CWDOK, cmd_argv.c_str());
+    }
 }
 
 void CLCommandHandle::do_cdup() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_cdup()");
+
+    if (chdir("..") < 0) {
+        reply_client("%d Failed to change directory.", ftp_response_code::kFTP_NOPERM);
+        return;
+    } else {
+        reply_client("%d Directory successfully changed.\r\n", ftp_response_code::kFTP_CWDOK);
+    }
 }
 
 void CLCommandHandle::do_quit() {
@@ -117,14 +136,46 @@ void CLCommandHandle::do_delete() {
 
 void CLCommandHandle::do_rmd() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_rmd()");
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Need target path name.", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    if (rmdir(cmd_argv.c_str()) < 0) {
+        reply_client("%d Remove a directory failed.", ftp_response_code::kFTP_FILEFAIL);
+        return;
+    } else {
+        reply_client("%d Remove successfully.", ftp_response_code::kFTP_RMDIROK);
+    }
 }
 
 void CLCommandHandle::do_mkd() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_mkd()");
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Need new path name.", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    if (mkdir(cmd_argv.c_str(), k_new_dir_perm) < 0) {
+        reply_client("%d Create directory operation failed.", ftp_response_code::kFTP_FILEFAIL);
+        return;
+    }
+    reply_client("%d \"%s\" directory created.", ftp_response_code::kFTP_MKDIROK, cmd_argv.c_str());
 }
 
 void CLCommandHandle::do_pwd() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_pwd()");
+
+    char pwd[MAX_PATH_LEN] = {0};
+    if (getcwd(pwd, sizeof(pwd)) == nullptr) {
+        utility::debug_info("Get PWD path failed");
+        reply_client("%d Fail to get pwd", ftp_response_code::kFTP_BADSENDFILE);
+    } else {
+        reply_client("%d \"%s\"", ftp_response_code::kFTP_PWDOK, pwd);
+    }
 }
 
 void CLCommandHandle::do_list() {
@@ -149,6 +200,9 @@ void CLCommandHandle::do_help() {
 
 void CLCommandHandle::do_noop() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_noop()");
+
+    /* NOOP 指令只要发送 ok 就行了 */
+    reply_client("%d NOOP OK.", ftp_response_code::kFTP_NOOPOK);
 }
 
 void CLCommandHandle::do_feat() {
@@ -183,7 +237,11 @@ void CLCommandHandle::handle() {
         parse_cmd(client_cmd_line);
 
         /* 调用相应的函数，执行命令 */
-        std::string cmd = m_client_cmd_vec[0];
+        std::string cmd = get_command();
+        if (cmd.empty()) {
+            utility::debug_socket_info(m_cmd_fd, std::string("Server get empty command."));
+            continue;
+        }
         utility::debug_info(std::string("User command: ") + cmd + "**");
         if (m_cmd_exec_map.count(cmd) == 0) {
             reply_client("%d Unknown command.", ftp_response_code::kFTP_BADCMD);
@@ -233,12 +291,10 @@ bool CLCommandHandle::get_cmd_line(char *buff, size_t len) {
 void CLCommandHandle::parse_cmd(char *cmd_line) {
     /* TODO: 以下为简化版的实现，待完善 */
     std::string str_cmd = std::string(cmd_line);
-    /* 将命令转换为大写 */
-    std::transform(str_cmd.begin(), str_cmd.end(), str_cmd.begin(), toupper);
     /* 去除行尾回车换行符 */
     strip_crlf(str_cmd);
-    /* TODO: 分割命令及参数 */
-    m_client_cmd_vec.emplace_back(str_cmd);
+    /* 分割命令及参数 */
+    split_cmd_and_argv(str_cmd, k_SP_delimiter);
 }
 
 void CLCommandHandle::strip_crlf(std::string &str) {
@@ -253,6 +309,27 @@ void CLCommandHandle::strip_crlf(std::string &str) {
             break;
         }
     } while (str.size() >= 2);
+}
+
+void CLCommandHandle::split_cmd_and_argv(std::string &str, const std::string &delimiter) {
+    m_client_cmd_vec.clear();
+
+    size_t pos_0 = 0, pos_1 = 0;
+    while ((pos_1 = str.find_first_of(delimiter, pos_0)) != std::string::npos) {
+        if (pos_1 == pos_0) {
+            pos_0 = pos_1 + 1;
+            continue;
+        }
+        m_client_cmd_vec.push_back(str.substr(pos_0, pos_1 - pos_0));
+        pos_0 = pos_1 + 1;
+    }
+    m_client_cmd_vec.push_back(str.substr(pos_0, pos_1 - pos_0));
+
+    if (!m_client_cmd_vec.empty()) {
+        /* 将命令转换为大写 */
+        std::string &cmd = m_client_cmd_vec[0];
+        std::transform(cmd.begin(), cmd.end(), cmd.begin(), toupper);
+    }
 }
 
 

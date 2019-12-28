@@ -26,6 +26,21 @@ private:
     bool get_cmd_line(char *buf, size_t len);   /* 获取一行命令 */
     void parse_cmd(char *cmd_line); /* 解析用户命令 */
     static void strip_crlf(std::string &str); /* 去除行尾 \r\n */
+    void split_cmd_and_argv(std::string &str, const std::string &delimiter);
+
+    const std::string &get_command() const {    /* 获取命令 */
+        if (m_client_cmd_vec.empty()) {
+            return k_empty_string;
+        }
+        return m_client_cmd_vec[0];
+    }
+
+    const std::string &get_a_cmd_argv() const {     /* 获取命令的参数 */
+        if (m_client_cmd_vec.size() < 2) {
+            return k_empty_string;
+        }
+        return m_client_cmd_vec[1];
+    }
 private:
     /* 访问控制命令 */
     void do_user(); /* 用户名 */
@@ -61,9 +76,13 @@ private:
 
 private:
     const char *kCRLF = "\r\n";
+    const std::string k_SP_delimiter = " "; /* 命令的空格分隔符 */
+    const std::string k_empty_string = "";  /* 空字符串 */
+    const int k_new_dir_perm = 0777;    /* 新建的目录的默认权限 */
 //    typedef void (CLCommandHandle::*PCommandExecutor)();
     using PCommandExecutor = void (CLCommandHandle::*)();
 
+private:
     std::unordered_map<std::string, PCommandExecutor> m_cmd_exec_map;
     int m_cmd_fd;
     int m_pipe_fd;
