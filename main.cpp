@@ -71,9 +71,6 @@ int main() {
                     prctl(PR_SET_PDEATHSIG, SIGKILL);
                     close(listen_fd);
 
-                    std::string mes_hello("Hello! MiniFTPD, your fd is: " + std::to_string(connect_fd) + "\r\n");
-                    send(connect_fd, mes_hello.c_str(), mes_hello.length(), 0);
-
                     CLFtpHandler ftp_handler(connect_fd);
                     ftp_handler.start_handle();
 
@@ -86,7 +83,7 @@ int main() {
 
             } else if ((socket_fd == signal_pipe.get_read_fd()) && CLEpoll::is_in_event(event)) {
                 /* 处理信号事件 */
-                char signals[1024];
+                char signals[1024] = {0};
                 int ret = signal_pipe.get_a_signal(signals, sizeof(signals));
                 if (ret == -1 || ret == 0) {
                     continue;

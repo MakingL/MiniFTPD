@@ -11,6 +11,7 @@
 
 CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
         m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false) {
+
     m_client_cmd_vec.clear();
     memset(client_cmd_line, 0, sizeof(client_cmd_line));
 
@@ -172,7 +173,8 @@ void CLCommandHandle::handle() {
 
         /* 获取用户命令 */
         if (!get_cmd_line(client_cmd_line, sizeof(client_cmd_line))) {
-            utility::debug_info("Get client command error");
+            utility::debug_info("Conn't Get client command line");
+            continue;
         } else {
             utility::debug_info(std::string("Get user command: ") + client_cmd_line + "**");
         }
@@ -211,16 +213,21 @@ void CLCommandHandle::welcome_client() {
     reply_client("%d Welcome to Mini FTP server", ftp_response_code::kFTP_GREET);
 }
 
-bool CLCommandHandle::get_cmd_line(char *buf, size_t len) {
-    int ret = 0;
-    /* TODO: 以下为简化版的实现，待完善*/
-    if ((ret = recv(m_cmd_fd, buf, len, 0)) < 0) {
-        utility::unix_error("Recv error");
-    } else {
-        return true;
-    }
+bool CLCommandHandle::get_cmd_line(char *buff, size_t len) {
+    assert(len >= 0);
 
-    return false;
+    int ret = m_buffer.read(m_cmd_fd);
+    if (ret < 0) {
+        utility::unix_error("Receive client command error");
+    } else if (ret == 0) {
+        utility::debug_info("Client exited");
+        close(m_cmd_fd);
+
+        exit(0);
+    } else {
+        return m_buffer.get_line(buff, len);
+//        return m_buffer.get_crlf_line(buff, len);
+    }
 }
 
 void CLCommandHandle::parse_cmd(char *cmd_line) {
@@ -228,15 +235,26 @@ void CLCommandHandle::parse_cmd(char *cmd_line) {
     std::string str_cmd = std::string(cmd_line);
     /* 将命令转换为大写 */
     std::transform(str_cmd.begin(), str_cmd.end(), str_cmd.begin(), toupper);
-    /* 最粗暴的去除行尾回车换行符，待完善 */
-    if (str_cmd[str_cmd.size() - 1] == '\n') {
-        str_cmd.erase(str_cmd.size() - 1);
-    }
-    if (str_cmd[str_cmd.size() - 1] == '\r') {
-        str_cmd.erase(str_cmd.size() - 1);
-    }
+    /* 去除行尾回车换行符 */
+    strip_crlf(str_cmd);
+    /* TODO: 分割命令及参数 */
     m_client_cmd_vec.emplace_back(str_cmd);
 }
+
+void CLCommandHandle::strip_crlf(std::string &str) {
+    if (str.size() < 2) {
+        return;
+    }
+    do {
+        auto r_pos = str.size() - 1;
+        if (str[r_pos] == '\n' || str[r_pos] == '\r') {
+            str.erase(r_pos);
+        } else {
+            break;
+        }
+    } while (str.size() >= 2);
+}
+
 
 
 

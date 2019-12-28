@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <vector>
 #include "ftp_codes.h"
+#include "buffer.h"
+#include "common.h"
 
 class CLCommandHandle {
 public:
@@ -19,11 +21,11 @@ public:
 
 private:
     void reply_client(const char *format, ...);
-    void welcome_client();
+    void welcome_client();  /* 给出 welcome 信息 */
 
-    bool get_cmd_line(char *buf, size_t len);
-
-    void parse_cmd(char *cmd_line);
+    bool get_cmd_line(char *buf, size_t len);   /* 获取一行命令 */
+    void parse_cmd(char *cmd_line); /* 解析用户命令 */
+    static void strip_crlf(std::string &str); /* 去除行尾 \r\n */
 private:
     /* 访问控制命令 */
     void do_user(); /* 用户名 */
@@ -68,7 +70,9 @@ private:
 
     bool m_b_stop;
     std::vector<std::string> m_client_cmd_vec;
-    char client_cmd_line[1024];
+    char client_cmd_line[MAX_COMMAND_LINE]; /* 用户读取用户命令行的缓冲区 */
+
+    CLBuffer m_buffer;  /* 用于接收客户数据的 socket 缓冲区 */
 };
 
 #endif //MINIFTPD_COMMAND_HANDLE_H
