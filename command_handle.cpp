@@ -92,6 +92,8 @@ void CLCommandHandle::do_cdup() {
 
 void CLCommandHandle::do_quit() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_quit()");
+    reply_client("%d Goodbye.", ftp_response_code::kFTP_GOODBYE);
+    m_b_stop = true;
 }
 
 void CLCommandHandle::do_port() {
@@ -188,14 +190,34 @@ void CLCommandHandle::do_nlst() {
 
 void CLCommandHandle::do_site() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_site()");
+    std::string cmd_argv_head = get_a_cmd_argv();
+    /* 转换为大写 */
+    std::transform(cmd_argv_head.begin(), cmd_argv_head.end(), cmd_argv_head.begin(), toupper);
+    if (m_client_cmd_vec.size() == 4 && cmd_argv_head == "CHMOD") {
+        /*SITE CHMOD <perm> <file>*/
+        do_chmod(atoi(m_client_cmd_vec[2].c_str()), m_client_cmd_vec[3].c_str());
+    } else if (m_client_cmd_vec.size() == 3 && cmd_argv_head == "UMASK") {
+        /* SITE UMASK [umask] */
+        do_unmask(atoi(m_client_cmd_vec[2].c_str()));
+    } else {
+        reply_client("%d Unknown site command.", ftp_response_code::kFTP_BADCMD);
+    }
 }
 
 void CLCommandHandle::do_syst() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_syst()");
+    reply_client("%d Unix Type: L8", ftp_response_code::kFTP_SYSTOK);
 }
 
 void CLCommandHandle::do_help() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_help()");
+    reply_client("%d-The following commands are recognized.", ftp_response_code::kFTP_HELP);
+    std::string cmd;
+    for (const auto& cmd_pair: m_cmd_exec_map) {
+        cmd += " " + cmd_pair.first;
+    }
+    reply_client(cmd.c_str());
+    reply_client("%d Help OK.", ftp_response_code::kFTP_HELP);
 }
 
 void CLCommandHandle::do_noop() {
@@ -207,15 +229,40 @@ void CLCommandHandle::do_noop() {
 
 void CLCommandHandle::do_feat() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_feat()");
+    reply_client("%d-Features:", ftp_response_code::kFTP_FEAT);
+    reply_client(" EPRT");
+    reply_client(" EPSV");
+    reply_client(" MDTM");
+    reply_client(" PASV");
+    reply_client(" REST STREAM"); /* 断点续传 */
+    reply_client(" SIZE");
+    reply_client(" TVFS");
+    reply_client(" UTF8");
+    reply_client("%d End", ftp_response_code::kFTP_FEAT);
 }
 
 void CLCommandHandle::do_opts() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_opts()");
+    reply_client("%d All is well!", ftp_response_code::kFTP_OPTSOK); /* 直接选择OK! */
 }
 
 void CLCommandHandle::do_size() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_size()");
 }
+
+void CLCommandHandle::do_chmod(unsigned int perm, const char *file_name) {
+    if (chmod(file_name, perm) < 0) {
+        reply_client("%d SITE CHMOD command failed.", ftp_response_code::kFTP_BADCMD);
+        return;
+    }
+    reply_client("%d SITE CHMOD Command OK.");
+}
+
+void CLCommandHandle::do_unmask(unsigned int mask) {
+    umask(mask);
+    reply_client("%d Umask OK.", ftp_response_code::kFTP_UMASKOK);
+}
+
 
 void CLCommandHandle::handle() {
     welcome_client();
@@ -289,7 +336,6 @@ bool CLCommandHandle::get_cmd_line(char *buff, size_t len) {
 }
 
 void CLCommandHandle::parse_cmd(char *cmd_line) {
-    /* TODO: 以下为简化版的实现，待完善 */
     std::string str_cmd = std::string(cmd_line);
     /* 去除行尾回车换行符 */
     strip_crlf(str_cmd);

@@ -73,6 +73,9 @@ private:
     void do_feat(); /* 处理Feat命令 */
     void do_opts(); /* 调整选项 */
     void do_size(); /* 获取文件的大小 */
+private:
+    void do_chmod(unsigned int perm, const char *file_name);
+    void do_unmask(unsigned int mask);
 
 private:
     const char *kCRLF = "\r\n";
