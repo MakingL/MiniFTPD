@@ -7,9 +7,12 @@
 
 #include <unordered_map>
 #include <vector>
+#include <memory>
 #include "ftp_codes.h"
 #include "buffer.h"
 #include "common.h"
+#include "ipc_utility.h"
+#include "tcp.h"
 
 class CLCommandHandle {
 public:
@@ -21,6 +24,7 @@ public:
 
 private:
     void reply_client(const char *format, ...);
+
     void welcome_client();  /* 给出 welcome 信息 */
 
     bool get_cmd_line(char *buf, size_t len);   /* 获取一行命令 */
@@ -41,6 +45,7 @@ private:
         }
         return m_client_cmd_vec[1];
     }
+
 private:
     /* 访问控制命令 */
     void do_user(); /* 用户名 */
@@ -75,7 +80,12 @@ private:
     void do_size(); /* 获取文件的大小 */
 private:
     void do_chmod(unsigned int perm, const char *file_name);
+
     void do_unmask(unsigned int mask);
+
+    ipc_utility::EMState do_send_list(bool verbose);
+
+    std::shared_ptr<tcp::CLConnection> get_data_connection();
 
 private:
     size_t send_ipc_msg(const void *msg, int len) { /* 发送 ipc 信息给子进程 */

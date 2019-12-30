@@ -30,6 +30,9 @@ namespace utility {
 #endif
     }
 
+    const char *get_file_perms(struct stat &sbuf);  /* 获取文件权限信息 */
+
+    const char *get_file_date(struct stat &sbuf);   /* 获取文件日期信息 */
 }
 
 #endif //FTPD_UTILITY_H

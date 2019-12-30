@@ -232,11 +232,31 @@ void CLCommandHandle::do_pwd() {
 }
 
 void CLCommandHandle::do_list() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_list()");
+    utility::debug_info("server execute do_list()");
+
+    reply_client("%d Here comes the directory listing.", ftp_response_code::kFTP_DATACONN);
+
+    /* 开始传输列表 */
+//    auto cmd_argv = get_a_cmd_argv();
+//    bool verbose = cmd_argv.empty(); /* 是否要传递所有的细节 */
+    if (ipc_utility::Error == do_send_list(true)) {
+        reply_client("%d Directory send not OK.", ftp_response_code::kFTP_NOPERM); /* 没有权限 */
+    } else {
+        reply_client("%d Directory send OK.", ftp_response_code::kFTP_TRANSFEROK);
+    }
 }
 
 void CLCommandHandle::do_nlst() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_nlst()");
+    utility::debug_info("server execute do_nlst()");
+
+    reply_client("%d Here comes the directory listing.", ftp_response_code::kFTP_DATACONN);
+
+    /* 开始传输列表 */
+    if (ipc_utility::Error == do_send_list(false)) {
+        reply_client("%d Directory send not OK.", ftp_response_code::kFTP_NOPERM); /* 没有权限 */
+    } else {
+        reply_client("%d Directory send OK.", ftp_response_code::kFTP_TRANSFEROK);
+    }
 }
 
 void CLCommandHandle::do_site() {
@@ -438,6 +458,61 @@ void CLCommandHandle::split_cmd_and_argv(std::string &str, const std::string &de
         std::string &cmd = m_client_cmd_vec[0];
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), toupper);
     }
+}
+
+ipc_utility::EMState CLCommandHandle::do_send_list(bool verbose) {
+    std::shared_ptr<tcp::CLConnection> connection = get_data_connection();  /* 数据连接 */
+
+    DIR *dir = opendir(".");
+    if (dir == nullptr) /* 目录打开失败 */
+        return ipc_utility::Error;
+
+    struct dirent *ent;
+    struct stat sbuf{0};
+
+    while ((ent = readdir(dir)) != nullptr) { /* 读取文件夹的信息 */
+        if (lstat(ent->d_name, &sbuf) < 0)
+            continue;
+        if (strncmp(ent->d_name, ".", 1) == 0)
+            continue; /* 忽略隐藏的文件 */
+        const char *permInfo = utility::get_file_perms(sbuf); /* 获得权限信息 */
+        char buf[1024] = {0};
+        if (verbose) { /* 是否要发送完整的信息的话 */
+            int offset = 0;
+            offset += sprintf(buf, "%s ", permInfo);
+            offset += sprintf(buf + offset, " %3ld %-8d %-8d ",
+                              sbuf.st_nlink, sbuf.st_uid, sbuf.st_gid);
+            offset += sprintf(buf + offset, "%8lu ", (unsigned long) sbuf.st_size); /* 文件大小 */
+            const char *dateInfo = utility::get_file_date(sbuf); /* 获得文件时间信息 */
+            offset += sprintf(buf + offset, "%s ", dateInfo);
+            if (S_ISLNK(sbuf.st_mode)) { /* 如果表示的是链接文件的话 */
+                char name[1024] = {0};
+                readlink(ent->d_name, name, sizeof(name));
+                offset += sprintf(buf + offset, "%s -> %s\r\n", ent->d_name, name);
+            } else {
+                offset += sprintf(buf + offset, "%s\r\n", ent->d_name);
+            }
+        } else {
+            sprintf(buf, "%s\r\n", ent->d_name);
+        }
+
+        tcp::send_data(connection->get_fd(), buf, strlen(buf));
+    }
+    closedir(dir); /* 关闭文件夹 */
+    return ipc_utility::Success;
+}
+
+std::shared_ptr<tcp::CLConnection> CLCommandHandle::get_data_connection() {
+    int data_fd = 0;
+    ipc_utility::EMIpcCmd cmd = ipc_utility::k_GetFd;
+    ipc_utility::EMState state;
+    tcp::send_data(m_pipe_fd, &cmd, sizeof(cmd));
+    tcp::recv_data(m_pipe_fd, &state, sizeof(state));
+
+    if (state == ipc_utility::Success) {
+        data_fd = ipc_utility::recv_fd(m_pipe_fd);  /* 进程间传递描述符 */
+    }
+    return std::make_shared<tcp::CLConnection>(data_fd);
 }
 
 
