@@ -30,7 +30,7 @@ CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
     m_cmd_exec_map["RETR"] = &CLCommandHandle::do_retr;
     m_cmd_exec_map["STOR"] = &CLCommandHandle::do_stor;
     m_cmd_exec_map["REST"] = &CLCommandHandle::do_rest;
-    m_cmd_exec_map["RNFR"] = &CLCommandHandle::do_rnfy;
+    m_cmd_exec_map["RNFR"] = &CLCommandHandle::do_rnfr;
     m_cmd_exec_map["RNTO"] = &CLCommandHandle::do_rnto;
     m_cmd_exec_map["ABOR"] = &CLCommandHandle::do_abor;
     m_cmd_exec_map["DELE"] = &CLCommandHandle::do_delete;
@@ -171,8 +171,8 @@ void CLCommandHandle::do_rest() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_rest()");
 }
 
-void CLCommandHandle::do_rnfy() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_rnfy()");
+void CLCommandHandle::do_rnfr() {
 }
 
 void CLCommandHandle::do_rnto() {

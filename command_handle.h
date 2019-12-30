@@ -61,7 +61,7 @@ private:
     void do_retr(); /* 获取某个文件 */
     void do_stor(); /* 保存（上传）文件 */
     void do_rest(); /* 重新开始（实现断点续传）*/
-    void do_rnfy(); /* 重命名开始 */
+    void do_rnfr(); /* 重命名开始 */
     void do_rnto(); /* 重命名为（两个命令一起为文件重新命名）  */
     void do_abor(); /* 放弃 */
     void do_delete();   /* 删除文件 */
