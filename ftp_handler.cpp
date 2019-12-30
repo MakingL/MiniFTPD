@@ -40,7 +40,7 @@ void CLFtpHandler::start_handle() {
         close(m_p_pipe_fd[1]);
 
         /* 处理客户端的命令 */
-        CLCommandHandle cmd_handler(m_command_fd, m_p_pipe_fd[1]);
+        CLCommandHandle cmd_handler(m_command_fd, m_p_pipe_fd[0]);
         cmd_handler.handle();
     }
 }
