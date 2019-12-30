@@ -65,7 +65,7 @@ void CLCommandHandle::do_pass() {
 }
 
 void CLCommandHandle::do_cwd() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_cwd()");
+    utility::debug_info("server execute do_cwd()");
 
     auto cmd_argv = get_a_cmd_argv();
     if (cmd_argv.empty()) {
@@ -81,7 +81,7 @@ void CLCommandHandle::do_cwd() {
 }
 
 void CLCommandHandle::do_cdup() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_cdup()");
+    utility::debug_info("server execute do_cdup()");
 
     if (chdir("..") < 0) {
         reply_client("%d Failed to change directory.", ftp_response_code::kFTP_NOPERM);
@@ -92,7 +92,8 @@ void CLCommandHandle::do_cdup() {
 }
 
 void CLCommandHandle::do_quit() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_quit()");
+    utility::debug_info("server execute do_quit()");
+
     reply_client("%d Goodbye.", ftp_response_code::kFTP_GOODBYE);
     m_b_stop = true;
 }
@@ -138,7 +139,7 @@ void CLCommandHandle::do_delete() {
 }
 
 void CLCommandHandle::do_rmd() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_rmd()");
+    utility::debug_info("server execute do_rmd()");
 
     auto cmd_argv = get_a_cmd_argv();
     if (cmd_argv.empty()) {
@@ -190,7 +191,8 @@ void CLCommandHandle::do_nlst() {
 }
 
 void CLCommandHandle::do_site() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_site()");
+    utility::debug_info("server execute do_site()");
+
     std::string cmd_argv_head = get_a_cmd_argv();
     /* 转换为大写 */
     std::transform(cmd_argv_head.begin(), cmd_argv_head.end(), cmd_argv_head.begin(), toupper);
@@ -206,15 +208,17 @@ void CLCommandHandle::do_site() {
 }
 
 void CLCommandHandle::do_syst() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_syst()");
+    utility::debug_info("server execute do_syst()");
+
     reply_client("%d Unix Type: L8", ftp_response_code::kFTP_SYSTOK);
 }
 
 void CLCommandHandle::do_help() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_help()");
+    utility::debug_info("server execute do_help()");
+
     reply_client("%d-The following commands are recognized.", ftp_response_code::kFTP_HELP);
     std::string cmd;
-    for (const auto& cmd_pair: m_cmd_exec_map) {
+    for (const auto &cmd_pair: m_cmd_exec_map) {
         cmd += " " + cmd_pair.first;
     }
     reply_client(cmd.c_str());
@@ -222,14 +226,15 @@ void CLCommandHandle::do_help() {
 }
 
 void CLCommandHandle::do_noop() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_noop()");
+    utility::debug_info("server execute do_noop()");
 
     /* NOOP 指令只要发送 ok 就行了 */
     reply_client("%d NOOP OK.", ftp_response_code::kFTP_NOOPOK);
 }
 
 void CLCommandHandle::do_feat() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_feat()");
+    utility::debug_info("server execute do_feat()");
+
     reply_client("%d-Features:", ftp_response_code::kFTP_FEAT);
     reply_client(" EPRT");
     reply_client(" EPSV");
@@ -243,7 +248,8 @@ void CLCommandHandle::do_feat() {
 }
 
 void CLCommandHandle::do_opts() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_opts()");
+    utility::debug_info("server execute do_opts()");
+
     reply_client("%d All is well!", ftp_response_code::kFTP_OPTSOK); /* 直接选择OK! */
 }
 
