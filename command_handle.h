@@ -78,6 +78,15 @@ private:
     void do_unmask(unsigned int mask);
 
 private:
+    size_t send_ipc_msg(const void *msg, int len) { /* 发送 ipc 信息给子进程 */
+        return send(m_pipe_fd, msg, len, 0);
+    }
+
+    size_t recv_ipc_msg(void *msg, int len) { /* 接收来自子进程的 ipc 信息 */
+        return recv(m_pipe_fd, msg, len, 0);
+    }
+
+private:
     const char *kCRLF = "\r\n";
     const std::string k_SP_delimiter = " "; /* 命令的空格分隔符 */
     const std::string k_empty_string = "";  /* 空字符串 */

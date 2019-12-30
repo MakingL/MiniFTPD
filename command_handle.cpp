@@ -8,6 +8,7 @@
 #include "command_handle.h"
 #include "utility.h"
 #include "tcp.h"
+#include "ipc_utility.h"
 
 CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
         m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false) {
@@ -298,6 +299,12 @@ void CLCommandHandle::handle() {
         }
     }
 
+    utility::debug_info("Command link process exit");
+    /* 通知子进程退出 */
+    ipc_utility::EMIpcCmd cmd = ipc_utility::k_Exit;
+    send_ipc_msg(&cmd, sizeof(cmd));
+
+    exit(EXIT_SUCCESS);
 }
 
 void CLCommandHandle::reply_client(const char *format, ...) {
