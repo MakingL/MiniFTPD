@@ -99,7 +99,36 @@ void CLCommandHandle::do_quit() {
 }
 
 void CLCommandHandle::do_port() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_port()");
+    utility::debug_info("server execute do_port()");
+    /* 这个参数是用来指定数据连接时的主机数据端口 */
+    /* 客户端传递过来用于数据传送的ip地址和端口号,然后这个函数将其传递给另外一个进程 */
+    //PORT 192,168,0,100,123,233
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Need host information.", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    int ip[4] = {0};
+    unsigned int h_port, l_port;
+    if (sscanf(cmd_argv.c_str(), "%d,%d,%d,%d,%u,%u", &ip[0], &ip[1], &ip[2], &ip[3], &h_port, &l_port) < 6) {
+        reply_client("%d Bad host information.", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    char ip_addr[20] = {0};
+    snprintf(ip_addr, sizeof(ip_addr), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]); /* 获得字符类型的ip */
+    uint16_t port = (h_port << 8) | (l_port & 0xFF); /* 得到port */
+
+    utility::debug_info(std::string("PORT client IP: ") + ip_addr + " port: " + std::to_string(port));
+
+    /* 将地址发送给另外一个进程 */
+    ipc_utility::EMIpcCmd cmd = ipc_utility::k_PeerInfo;
+    send_ipc_msg(&cmd, sizeof(cmd)); /* 传递命令 */
+    send_ipc_msg(&port, sizeof(port)); /* 传递端口号 */
+    send_ipc_msg(ip_addr, strlen(ip_addr)); /* 传递 IP 地址 */
+    reply_client("%d PORT command successful. Consider using PASV.", ftp_response_code::kFTP_PORTOK);
 }
 
 void CLCommandHandle::do_pasv() {
