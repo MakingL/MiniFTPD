@@ -132,7 +132,27 @@ void CLCommandHandle::do_port() {
 }
 
 void CLCommandHandle::do_pasv() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_pasv()");
+    /* PASV 模式代表客户端主动来连接服务器,双方来协商一些连接的信息 */
+    utility::debug_info("server execute do_pasv()");
+
+    ipc_utility::EMIpcCmd cmd = ipc_utility::k_ExecPASV;
+    tcp::send_data(m_pipe_fd, &cmd, sizeof(cmd));
+
+    int ip_size;
+    char ip_addr[20] = {0};
+    uint16_t port;
+    tcp::recv_data(m_pipe_fd, &ip_size, sizeof(ip_size));    /* 得到ip地址的长度 */
+    tcp::recv_data(m_pipe_fd, ip_addr, ip_size);    /* 获得ip地址 */
+    tcp::recv_data(m_pipe_fd, &port, sizeof(port));  /* 获得端口地址 */
+
+    utility::debug_info(std::string("PASV ip_addr: ") + ip_addr + " port: " + std::to_string(port));
+
+    unsigned int ip_v[4];
+    if (sscanf(ip_addr, "%u.%u.%u.%u", ip_v, ip_v + 1, ip_v + 2, ip_v + 3) < 4) {
+        utility::debug_info("IP Address format is wrong");
+    }
+    reply_client("%d Entering Entering Passive Mode (%u,%u,%u,%u,%u,%u).", ftp_response_code::kFTP_PASVOK,
+                 ip_v[0], ip_v[1], ip_v[2], ip_v[3], port >> 8, port & 0xFF);
 }
 
 void CLCommandHandle::do_type() {
