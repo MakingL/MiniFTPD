@@ -205,7 +205,7 @@ void CLCommandHandle::do_rmd() {
 }
 
 void CLCommandHandle::do_mkd() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_mkd()");
+    utility::debug_info("server execute do_mkd()");
     auto cmd_argv = get_a_cmd_argv();
     if (cmd_argv.empty()) {
         reply_client("%d Need new path name.", ftp_response_code::kFTP_BADOPTS);
@@ -220,7 +220,7 @@ void CLCommandHandle::do_mkd() {
 }
 
 void CLCommandHandle::do_pwd() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_pwd()");
+    utility::debug_info("server execute do_pwd()");
 
     char pwd[MAX_PATH_LEN] = {0};
     if (getcwd(pwd, sizeof(pwd)) == nullptr) {
@@ -362,7 +362,7 @@ void CLCommandHandle::handle() {
         /* 调用相应的函数，执行命令 */
         std::string cmd = get_command();
         if (cmd.empty()) {
-            utility::debug_socket_info(m_cmd_fd, std::string("Server get empty command."));
+            utility::debug_info(std::string("Server get empty command."));
             continue;
         }
         utility::debug_info(std::string("User command: ") + cmd + "**");
