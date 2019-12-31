@@ -80,6 +80,7 @@ namespace ftp_response_code {
     const int kFTP_FILEFAIL = 550;
     const int kFTP_NOPERM = 550;
     const int kFTP_UPLOADFAIL = 553;
+    const int kFTP_RENAMEFAIL = 553;
 }
 
 
