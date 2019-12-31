@@ -116,7 +116,15 @@ private:
     char client_cmd_line[MAX_COMMAND_LINE]; /* 用户读取用户命令行的缓冲区 */
 
     CLBuffer m_buffer;  /* 用于接收客户数据的 socket 缓冲区 */
+
+    enum EMMode {
+        ASCII, /* ascii文本格式 */
+        BINARY, /* 二进制格式 */
+    };
+    EMMode m_data_type; /* 传输的数据类型 */
+
     std::string m_file_name; /* 用来记录需要重命名的文件名 */
+    long long m_resume_point;   /* 断点续传点 */
 };
 
 #endif //MINIFTPD_COMMAND_HANDLE_H

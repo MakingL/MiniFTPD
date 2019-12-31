@@ -11,7 +11,8 @@
 #include "ipc_utility.h"
 
 CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
-        m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false) {
+        m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false),
+        m_data_type(BINARY), m_resume_point(0) {
 
     m_client_cmd_vec.clear();
     memset(client_cmd_line, 0, sizeof(client_cmd_line));
@@ -156,7 +157,26 @@ void CLCommandHandle::do_pasv() {
 }
 
 void CLCommandHandle::do_type() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_type()");
+    utility::debug_info("server execute do_type()");
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing argument\n A(scii) I(mage) L(ocal)", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    /* 转换为大写 */
+    std::transform(cmd_argv.begin(), cmd_argv.end(), cmd_argv.begin(), toupper);
+
+    if (cmd_argv == "A") {
+        m_data_type = ASCII;
+        reply_client("%d Switching to ASCII mode.", ftp_response_code::kFTP_TYPEOK);
+    } else if (cmd_argv == "I") {
+        m_data_type = BINARY;
+        reply_client("%d Switching to BINARY mode.", ftp_response_code::kFTP_TYPEOK);
+    } else {
+        reply_client("%d Unrecognised TYPE command.", ftp_response_code::kFTP_BADCMD);
+    }
 }
 
 void CLCommandHandle::do_retr() {
@@ -168,7 +188,16 @@ void CLCommandHandle::do_stor() {
 }
 
 void CLCommandHandle::do_rest() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_rest()");
+    utility::debug_info("server execute do_rest()");
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing argument: resume point", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    m_resume_point = std::atoll(cmd_argv.c_str());  /* 断点续传支持 */
+    reply_client("%d Restart position accepted.", ftp_response_code::kFTP_RESTOK);
 }
 
 void CLCommandHandle::do_rnfr() {
@@ -215,7 +244,17 @@ void CLCommandHandle::do_rnto() {
 }
 
 void CLCommandHandle::do_abor() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_abor()");
+    utility::debug_info("server execute do_abor()");
+
+    /*
+     * 服务器接收这个命令时可能处在两种状态.(1) FTP服务命令已经完成了,或者(2)FTP服务还在执行中.
+     * 对于第一种情况，服务器关闭数据连接(如果数据连接是打开的)回应226代码,表示放弃命令已经成功处理.
+     * 对于第二种情况,服务器放弃正在进行的FTP服务,关闭数据连接,返回426响应代码,表示请求服务异常终止,
+     * 然后服务器发送226代码,表示放弃命令成功处理.
+     *
+     * 在这里的ABOR命令中,只发送了226代码,因为426代码在其余各个服务中发送.
+     */
+    reply_client("%d No transfer to Abort!", ftp_response_code::kFTP_TRANSFEROK);
 }
 
 void CLCommandHandle::do_delete() {
