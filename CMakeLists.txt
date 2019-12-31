@@ -13,3 +13,5 @@ add_definitions(-std=c++11)
 add_executable(MiniFTPD main.cpp tcp.cpp utility.cpp
         epoll_event.cpp signal_wrapper.cpp pipe_wrapper.cpp ftp_handler.cpp command_handle.cpp
         data_handle.cpp buffer.cpp ipc_utility.cpp record_lock.cpp)
+
+target_link_libraries(MiniFTPD crypt)

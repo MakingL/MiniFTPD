@@ -10,6 +10,8 @@
 #include "tcp.h"
 #include "ipc_utility.h"
 #include "record_lock.h"
+#include <unistd.h>
+#include <crypt.h>
 
 CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
         m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false),
@@ -59,11 +61,64 @@ CLCommandHandle::~CLCommandHandle() {
 
 
 void CLCommandHandle::do_user() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_user()");
+    utility::debug_info("server execute do_user()");
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing argument: user name", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    struct passwd *pw = getpwnam(cmd_argv.c_str());
+    if (pw == nullptr) {
+        // 用户不存在
+        reply_client("%d Login incorrect.", ftp_response_code::kFTP_LOGINERR);
+        return;
+    }
+
+    m_uid = pw->pw_uid;
+
+    reply_client("%d Please specify the password.", ftp_response_code::kFTP_GIVEPWORD);
 }
 
 void CLCommandHandle::do_pass() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_pass()");
+    utility::debug_info("server execute do_pass()");
+
+    struct passwd *pw = getpwuid(m_uid);
+    if (pw == nullptr) {
+        // 用户不存在
+        reply_client("%d Login incorrect.", ftp_response_code::kFTP_LOGINERR);
+        return;
+    }
+
+    struct spwd *sp = getspnam(pw->pw_name);
+    if (sp == nullptr) {
+        reply_client("Login incorrect.", ftp_response_code::kFTP_LOGINERR);
+        return;
+    }
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing argument: password", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    // 将明文进行加密
+    char *encrypted_pass = crypt(cmd_argv.c_str(), sp->sp_pwdp);
+    // 验证密码
+    if (strcmp(encrypted_pass, sp->sp_pwdp) != 0) {
+        reply_client("%d Login incorrect.", ftp_response_code::kFTP_LOGINERR);
+        return;
+    }
+
+    /*signal(SIGURG, handle_sigurg);
+    activate_sigurg(sess->ctrl_fd);*/
+
+    /*umask(077);*/
+    setegid(pw->pw_gid);
+    seteuid(pw->pw_uid);
+    chdir(pw->pw_dir);
+    reply_client("%d Login successful.", ftp_response_code::kFTP_LOGINOK);
 }
 
 void CLCommandHandle::do_cwd() {
