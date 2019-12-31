@@ -12,8 +12,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # 并将名称保存到 DIR_SRCS 变量
 aux_source_directory(src/ DIR_SRCS)
 
+set(INC_DIR include)    # 头文件
+set(LINK_DIR lib/)  # 链接库的位置
+
+include_directories(${INC_DIR}) # 头文件
+link_directories(${LINK_DIR}) # 链接库的位置
+
 # 指定生成目标
 add_executable(MiniFTPD ${DIR_SRCS})
 
 # 添加链接库
 target_link_libraries(MiniFTPD crypt)
+target_link_libraries(MiniFTPD libyaml-cpp.a)

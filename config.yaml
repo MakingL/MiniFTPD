@@ -1,0 +1,3 @@
+server:
+  listen_host: "0.0.0.0"  # server 端监听的主机地址
+  listen_port: 2222 # 命令连接的监听的端口

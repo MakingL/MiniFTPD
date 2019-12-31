@@ -5,10 +5,8 @@
 #include "pipe_wrapper.h"
 #include "signal_wrapper.h"
 #include "ftp_handler.h"
+#include "configure.h"
 
-
-const int SERVER_LISTEN_PORT = 2222;
-const char *SERVER_LISTEN_HOST = "0.0.0.0";
 
 int signal_pipe_fd[2];
 
@@ -23,7 +21,10 @@ void signal_handler(int sig) {
 int main() {
     utility::debug_info("MiniFTPD Start");
 
-    CLTCPServer tcp_server(SERVER_LISTEN_HOST, SERVER_LISTEN_PORT);
+    /* 解析配置文件中的参数 */
+    configure::parse_config_file();
+
+    CLTCPServer tcp_server(configure::SERVER_LISTEN_HOST.c_str(), configure::SERVER_LISTEN_PORT);
     int listen_fd = tcp_server.start_listen();
 
     tcp::get_local_ip(nullptr);
