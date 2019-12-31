@@ -4,14 +4,16 @@ cmake_minimum_required(VERSION 2.8.4)
 # 项目信息
 project(MiniFTPD)
 
-set(CMAKE_CXX_STANDARD 14)
+# specify the C++ standard
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# C++ 11
-add_definitions(-std=c++11)
+# 查找指定目录下的所有源文件，
+# 并将名称保存到 DIR_SRCS 变量
+aux_source_directory(src/ DIR_SRCS)
 
 # 指定生成目标
-add_executable(MiniFTPD main.cpp tcp.cpp utility.cpp
-        epoll_event.cpp signal_wrapper.cpp pipe_wrapper.cpp ftp_handler.cpp command_handle.cpp
-        data_handle.cpp buffer.cpp ipc_utility.cpp record_lock.cpp)
+add_executable(MiniFTPD ${DIR_SRCS})
 
+# 添加链接库
 target_link_libraries(MiniFTPD crypt)
