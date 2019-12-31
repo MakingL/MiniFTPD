@@ -26,6 +26,8 @@ int main() {
     CLTCPServer tcp_server(SERVER_LISTEN_HOST, SERVER_LISTEN_PORT);
     int listen_fd = tcp_server.start_listen();
 
+    tcp::get_local_ip(nullptr);
+
     CLEpoll event_epoll(5);
     /* 通过管道统一信号源  */
     CLPipeWrapper signal_pipe(signal_pipe_fd);

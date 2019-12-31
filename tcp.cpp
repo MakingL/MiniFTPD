@@ -7,6 +7,7 @@
 #include "utility.h"
 #include "common.h"
 
+static std::string g_local_ip;
 
 CLTCPServer::CLTCPServer(const char *host, unsigned int port) : m_port(port), m_host(host) {
     if ((m_listen_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
@@ -144,6 +145,12 @@ namespace tcp {
     }
 
     int get_local_ip(char *ip) {
+        /* 以下获取 IP 地址的方式虽然鲁棒性较好，但比较耗时 */
+        if (!g_local_ip.empty() && ip) {
+            strcpy(ip, g_local_ip.c_str());
+            return 0;
+        }
+
         char host[48] = {0};
         if (gethostname(host, sizeof(host)) < 0)
             return -1;
@@ -151,9 +158,14 @@ namespace tcp {
         if ((hp = gethostbyname(host)) == nullptr)
             return -1;
 
-        strcpy(ip, inet_ntoa(*(struct in_addr *) hp->h_addr));
+        if (ip) {
+            strcpy(ip, inet_ntoa(*(struct in_addr *) hp->h_addr));
+        }
+
+        g_local_ip = inet_ntoa(*(struct in_addr *) hp->h_addr);
         return 0;
 
+        /* 以下一种获取本机 IP 地址的方法只能获取到 eth0 网卡的地址，鲁棒性差 */
 /*        int fd;
         struct sockaddr_in *addr;
         struct ifreq ifr{0};
