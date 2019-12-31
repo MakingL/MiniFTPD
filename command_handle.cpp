@@ -171,12 +171,47 @@ void CLCommandHandle::do_rest() {
     utility::debug_socket_info(m_cmd_fd, "server execute do_rest()");
 }
 
-    utility::debug_socket_info(m_cmd_fd, "server execute do_rnfy()");
 void CLCommandHandle::do_rnfr() {
+    utility::debug_info("server execute do_rnfr()");
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing argument: file name", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    if (!is_file_existed(cmd_argv.c_str())) {
+        reply_client("%d Sorry, but that file doesn't exist.", ftp_response_code::kFTP_FILEFAIL);
+        return;
+    }
+
+    /* 这个命令指定了需要重新命名的原始路径名,后面必须马上接着RNTO命令,来指定新的文件路径 */
+    m_file_name = std::move(cmd_argv);
+    reply_client("%d Ready for rename file.", ftp_response_code::kFTP_RNFROK);
 }
 
 void CLCommandHandle::do_rnto() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_rnto()");
+    utility::debug_info("server execute do_rnto()");
+
+    if (m_file_name.empty()) {
+        reply_client("%d RNFR require first.", ftp_response_code::kFTP_NEEDRNFR);
+        return;
+    }
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing argument: file name", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    if (rename(m_file_name.c_str(), cmd_argv.c_str()) < 0) {    /* 重命名 */
+        reply_client("%d Rename error.", ftp_response_code::kFTP_RENAMEFAIL);
+        return;
+    }
+
+    reply_client(R"(%d Successfully rename file "%s" to "%s".)",
+                 ftp_response_code::kFTP_RENAMEOK, m_file_name.c_str(), cmd_argv.c_str());
+    m_file_name.clear(); /* 每次重命名完要清空 m_file_name*/
 }
 
 void CLCommandHandle::do_abor() {
@@ -184,7 +219,20 @@ void CLCommandHandle::do_abor() {
 }
 
 void CLCommandHandle::do_delete() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_delete()");
+    utility::debug_info("server execute do_delete()");
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing argument: file name", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    if (unlink(cmd_argv.c_str()) < 0) {
+        reply_client("%d Delete operation fail.", ftp_response_code::kFTP_NOPERM);
+        return;
+    }
+
+    reply_client("%d Delete operation successful.", ftp_response_code::kFTP_DELEOK);
 }
 
 void CLCommandHandle::do_rmd() {
@@ -323,7 +371,28 @@ void CLCommandHandle::do_opts() {
 }
 
 void CLCommandHandle::do_size() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_size()");
+    utility::debug_info("server execute do_size()");
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing file name argument.", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    struct stat fileInfo{0};
+    if (stat(cmd_argv.c_str(), &fileInfo) < 0) {
+        reply_client("%d SIZE operation failed.", ftp_response_code::kFTP_FILEFAIL);
+        return;
+    }
+
+    if (!S_ISREG(fileInfo.st_mode)) { /* 没有权限获得文件的信息 */
+        reply_client("%d Have no permission.", ftp_response_code::kFTP_NOPERM);
+        return;
+    }
+    char buf[20] = {0};
+    sprintf(buf, "%lld", (long long) fileInfo.st_size);
+
+    reply_client("%d %s", ftp_response_code::kFTP_SIZEOK, buf);
 }
 
 void CLCommandHandle::do_chmod(unsigned int perm, const char *file_name) {
@@ -513,6 +582,11 @@ std::shared_ptr<tcp::CLConnection> CLCommandHandle::get_data_connection() {
         data_fd = ipc_utility::recv_fd(m_pipe_fd);  /* 进程间传递描述符 */
     }
     return std::make_shared<tcp::CLConnection>(data_fd);
+}
+
+bool CLCommandHandle::is_file_existed(const char *file_name) {
+    struct stat st{0};
+    return lstat(file_name, &st) == 0;
 }
 
 

@@ -46,6 +46,8 @@ private:
         return m_client_cmd_vec[1];
     }
 
+    inline static bool is_file_existed(const char *file_name);
+
 private:
     /* 访问控制命令 */
     void do_user(); /* 用户名 */
@@ -114,6 +116,7 @@ private:
     char client_cmd_line[MAX_COMMAND_LINE]; /* 用户读取用户命令行的缓冲区 */
 
     CLBuffer m_buffer;  /* 用于接收客户数据的 socket 缓冲区 */
+    std::string m_file_name; /* 用来记录需要重命名的文件名 */
 };
 
 #endif //MINIFTPD_COMMAND_HANDLE_H
