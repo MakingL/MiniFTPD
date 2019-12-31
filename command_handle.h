@@ -103,6 +103,7 @@ private:
     const std::string k_SP_delimiter = " "; /* 命令的空格分隔符 */
     const std::string k_empty_string = "";  /* 空字符串 */
     const int k_new_dir_perm = 0777;    /* 新建的目录的默认权限 */
+    const int k_uploaded_file_perm = 0666;    /* 上传的文件的默认权限 */
 //    typedef void (CLCommandHandle::*PCommandExecutor)();
     using PCommandExecutor = void (CLCommandHandle::*)();
 
@@ -124,6 +125,7 @@ private:
     EMMode m_data_type; /* 传输的数据类型 */
 
     std::string m_file_name; /* 用来记录需要重命名的文件名 */
+    static const int BYTES_PEER_TRANSFER = 1024 * 1024; /* 文件下载时每次传输的数据量 */
     long long m_resume_point;   /* 断点续传点 */
 };
 

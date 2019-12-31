@@ -9,6 +9,7 @@
 #include "utility.h"
 #include "tcp.h"
 #include "ipc_utility.h"
+#include "record_lock.h"
 
 CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
         m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false),
@@ -179,12 +180,134 @@ void CLCommandHandle::do_type() {
     }
 }
 
-void CLCommandHandle::do_retr() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_retr()");
+void CLCommandHandle::do_retr() {   /* 下载文件 */
+    utility::debug_info("server execute do_retr()");
+
+    std::shared_ptr<tcp::CLConnection> data_connection = get_data_connection();  /* 数据连接 */
+
+    auto cmd_argv = get_a_cmd_argv();
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing argument: target file name", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    int fd = open(cmd_argv.c_str(), O_RDONLY, NULL); /* 打开文件 */
+    if (fd < 0) {
+        reply_client("%d Open file failed.", ftp_response_code::kFTP_FILEFAIL);
+        return;
+    }
+
+    /* 开始传送文件 */
+    struct stat file_info{0};
+    size_t file_size = 0;
+    {   /* 代码块外自动释放文件锁 */
+        CLRDRecordLock file_rd_lock(fd); /* 读锁,如果不能读的话,会一直阻塞 */
+        fstat(fd, &file_info);
+
+        if (!S_ISREG(file_info.st_mode)) { /* 判断是否为普通文件,设备文件不能下载 */
+            reply_client("%d It is not a regular file.", ftp_response_code::kFTP_FILEFAIL);
+            return;
+        }
+
+        file_size = (long long) file_info.st_size;  /* 文件大小 */
+        if (m_data_type == BINARY) {    /* 数据类型 */
+            reply_client("%d Opening BINARY mode data connection for %s (%lld bytes).",
+                         ftp_response_code::kFTP_DATACONN, cmd_argv.c_str(), file_size);
+        } else {
+            reply_client("%d Opening ASCII mode data connection for %s (%lld bytes).",
+                         ftp_response_code::kFTP_DATACONN, cmd_argv.c_str(), file_size);
+        }
+
+        if (m_resume_point != 0) {  /* 断点续传支持 */
+            if ((lseek(fd, m_resume_point, SEEK_SET)) < 0) { /* 重定位文件 */
+                utility::debug_info("lseek file error");
+            }
+            file_size -= m_resume_point; /* 需要传送的字节的数目 */
+        }
+
+        while (file_size > 0) { /* 传输文件数据 */
+            int sent_size = sendfile(data_connection->get_fd(), fd, nullptr, BYTES_PEER_TRANSFER); /* 每次发送一点 */
+            if (sent_size == -1) {
+                break;
+            }
+            file_size -= sent_size;
+        }
+    }
+    if (file_size == 0) {
+        reply_client("%d Transfer complete.", ftp_response_code::kFTP_TRANSFEROK);
+    } else {    /* 连接关闭,放弃传输 */
+        reply_client("%d Transfer failed.", ftp_response_code::kFTP_BADSENDNET);
+    }
+
+    tcp::close_fd(fd); /** 关闭文件 */
+    m_resume_point = 0; /* 文件已经传送完毕， 要将断点复原 */
 }
 
 void CLCommandHandle::do_stor() {
-    utility::debug_socket_info(m_cmd_fd, "server execute do_stor()");
+    utility::debug_info("server execute do_stor()");
+
+    std::shared_ptr<tcp::CLConnection> data_connection = get_data_connection();  /* 数据连接 */
+
+    auto cmd_argv = get_a_cmd_argv();   /* 获取文件名参数 */
+    if (cmd_argv.empty()) {
+        reply_client("%d Missing argument: target file name", ftp_response_code::kFTP_BADOPTS);
+        return;
+    }
+
+    /* store的话代表不用append */
+    int fd = open(cmd_argv.c_str(), O_CREAT | O_WRONLY, k_uploaded_file_perm);
+    if (fd < 0) {
+        reply_client("%d Can't open that file.", ftp_response_code::kFTP_UPLOADFAIL);
+        return;
+    }
+
+    ipc_utility::EMState state = ipc_utility::Success;
+
+    {   /* 跳出代码块自动释放文件写锁 */
+        CLWRRecordLock lock(fd); /* 对文件加写锁 */
+
+        if (m_resume_point == 0) {
+            ftruncate(fd, 0); /* 清空文件内容 */
+            if ((lseek(fd, 0, SEEK_SET)) < 0) { /* 定位到文件的开头 */
+                utility::debug_info("lseek file error");
+            }
+        } else {  /* 断点续传支持 */
+            if ((lseek(fd, m_resume_point, SEEK_SET)) < 0) { /* 定位到文件的偏移位置 */
+                utility::debug_info("lseek file error");
+            }
+        }
+
+        reply_client("%d OK to send data.", ftp_response_code::kFTP_DATACONN);
+
+        /* 读取数据,写入本地文件 */
+        char buf[1024 * 1024] = {0};
+        while (true) {
+            int res = read(data_connection->get_fd(), buf, sizeof(buf));
+            if (res == -1) {
+                if (errno == EINTR)
+                    continue;
+                else {
+                    state = ipc_utility::ReadError;
+                    break;
+                }
+            } else if (res == 0) { /* 对方关闭了连接 */
+                break;
+            }
+            if (write(fd, buf, res) != res) { /* 往文件中写入数据 */
+                state = ipc_utility::WriteError;
+                break;
+            }
+        }
+    }
+    tcp::close_fd(fd); /* 关闭文件 */
+
+    if (state == ipc_utility::ReadError) { /* 读出错 */
+        reply_client("%d Fail to read from network stream.", ftp_response_code::kFTP_BADSENDNET);
+    } else if (state == ipc_utility::WriteError) {    /* 写出错 */
+        reply_client("%d Fail to write to local file.", ftp_response_code::kFTP_BADSENDFILE);
+    } else {
+        reply_client("%d Transfer complete.", ftp_response_code::kFTP_TRANSFEROK); /* 文件传送成功 */
+    }
 }
 
 void CLCommandHandle::do_rest() {
