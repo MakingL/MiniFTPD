@@ -98,6 +98,8 @@ void CLDataHandle::do_get_fd() {
         if ((fd = accept(m_data_fd, nullptr, nullptr)) < 0) {
             utility::debug_info("Accept client data link error");
             return;
+        } else {
+            tcp::close_fd(m_data_fd);   /* Client 已连接，停止监听该端口，以及时释放该端口资源 */
         }
     } else {    /* PORT 模式，主动连接 client */
         if ((fd = tcp::open_client_fd(m_ip_addr.c_str(), m_port)) < 0) {

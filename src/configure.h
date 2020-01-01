@@ -6,12 +6,15 @@
 #define MINIFTPD_CONFIGURE_H
 
 #include <string>
-#include "../include/yaml-cpp/yaml.h"
+#include "yaml-cpp/yaml.h"
 
 namespace configure {
     /* 配置信息 */
     extern std::string SERVER_LISTEN_HOST;
     extern  int SERVER_LISTEN_PORT;
+
+    extern int PASV_PORT_LOW;
+    extern int PASV_PORT_HIGH;
 
     void parse_config_file();   /* 从配置文件中解析配置信息 */
 

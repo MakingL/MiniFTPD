@@ -195,6 +195,23 @@ void CLCommandHandle::do_pasv() {
     ipc_utility::EMIpcCmd cmd = ipc_utility::k_ExecPASV;
     tcp::send_data(m_pipe_fd, &cmd, sizeof(cmd));
 
+    ipc_utility::EMState state = ipc_utility::Error;
+    recv_ipc_msg(&state, sizeof(state));
+    if (state != ipc_utility::Success) {
+
+
+        if (state == ipc_utility::PortExhausted) {
+            utility::debug_info(std::string("PASV error: All reserved TCP ports are busy"));
+
+            reply_client("%d All reserved TCP ports are busy.", ftp_response_code::kFTP_BADSENDCONN);
+        } else {
+            utility::debug_info(std::string("PASV error: Can't open data connection"));
+
+            reply_client("%d Can't open data connection.", ftp_response_code::kFTP_BADSENDCONN);
+        }
+        return;
+    }
+
     int ip_size;
     char ip_addr[20] = {0};
     uint16_t port;

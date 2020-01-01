@@ -18,6 +18,7 @@ namespace ipc_utility {
         Success,
         ReadError,
         WriteError,
+        PortExhausted,  /* 端口耗尽 */
     };
 
     int send_fd(int sock_fd, int fd);   /* 在进程间传递文件描述符 */

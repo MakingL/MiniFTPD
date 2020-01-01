@@ -1,3 +1,7 @@
 server:
   listen_host: "0.0.0.0"  # server 端监听的主机地址
   listen_port: 2222 # 命令连接的监听的端口
+
+PASV:  # PASV 模式，指定该模式下可以使用的端口范围
+  port_low: 22222 # 数据连接所用的端口下限
+  port_high: 55555  # 数据连接所用的端口上限
