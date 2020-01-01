@@ -13,6 +13,8 @@ namespace configure {
     std::string SERVER_LISTEN_HOST;
     int SERVER_LISTEN_PORT;
 
+    int PORT_CONN_PORT;
+
     int PASV_PORT_LOW;
     int PASV_PORT_HIGH;
 
@@ -32,6 +34,17 @@ namespace configure {
         utility::debug_info(std::string("Server listen port: ") + std::to_string(SERVER_LISTEN_PORT));
         assert(!SERVER_LISTEN_HOST.empty());
         assert(SERVER_LISTEN_PORT > 0 && SERVER_LISTEN_PORT < 65536);
+
+        if (!node["PORT"].IsDefined()) {
+            std::cerr << "Server PORT config information isn't configured correctly" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        auto port_config = node["PORT"];
+        PORT_CONN_PORT = port_config["data_connection_port"].as<int>();
+        utility::debug_info(std::string("PORT data port: ") + std::to_string(PORT_CONN_PORT));
+
+        assert(PORT_CONN_PORT > 0 && PORT_CONN_PORT < 65536);
 
         if (!node["PASV"].IsDefined()) {
             std::cerr << "Server PASV config information isn't configured correctly" << std::endl;

@@ -91,13 +91,27 @@ namespace tcp {
     *   Returns -1 and sets errno on Unix error.
     *   Returns -2 and sets h_errno on DNS (gethostbyname) error.
     */
-    int open_client_fd(const char *hostname, int port) {
+    int open_client_fd(const char *hostname, int port, int client_port) {
         int client_fd;
         struct hostent *hp;
         struct sockaddr_in server_addr{0};
 
         if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
             return -1; /* check errno for cause of error */
+        if (client_port != 0) {
+            int on = 1;
+            if ((setsockopt(client_fd, SOL_SOCKET, SO_REUSEADDR, (const char *) &on, sizeof(on))) < 0) {
+                return -1;
+            }
+
+            struct sockaddr_in local_addr;
+            memset(&local_addr, 0, sizeof(local_addr));
+            local_addr.sin_family = AF_INET;
+            local_addr.sin_port = htons(port);
+            if (bind(client_fd, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0) {
+                return -1;
+            }
+        }
 
         bzero((char *) &server_addr, sizeof(server_addr));
         server_addr.sin_family = AF_INET;

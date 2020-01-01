@@ -13,6 +13,8 @@ namespace configure {
     extern std::string SERVER_LISTEN_HOST;
     extern  int SERVER_LISTEN_PORT;
 
+    extern int PORT_CONN_PORT;
+
     extern int PASV_PORT_LOW;
     extern int PASV_PORT_HIGH;
 

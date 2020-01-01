@@ -157,10 +157,11 @@ void CLDataHandle::do_get_fd() {
             tcp::close_fd(m_data_fd);   /* Client 已连接，停止监听该端口，以及时释放该端口资源 */
         }
     } else {    /* PORT 模式，主动连接 client */
-        if ((fd = tcp::open_client_fd(m_ip_addr.c_str(), m_port)) < 0) {
+        if ((fd = tcp::open_client_fd(m_ip_addr.c_str(), m_port, configure::PORT_CONN_PORT)) < 0) {
             utility::debug_info("Cannot connect to PORT client");
             return;
         }
+        utility::debug_info(std::string("PORT local port: ") + std::to_string(configure::PORT_CONN_PORT));
     }
 
     ipc_utility::EMState state = ipc_utility::Success;

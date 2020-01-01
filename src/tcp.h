@@ -63,7 +63,7 @@ namespace tcp {
     *   Returns -2 and sets h_errno on DNS (gethostbyname) error.
     */
     /* $begin open_client_fd */
-    int open_client_fd(const char *hostname, int port);
+    int open_client_fd(const char *hostname, int port, int client_port=0);
     /* $end open_client_fd */
 
     /*
