@@ -2,11 +2,13 @@
 // Created by MLee on 2019/12/26.
 //
 
+#include <random>
 #include "data_handle.h"
 #include "common.h"
 #include "utility.h"
 #include "ipc_utility.h"
 #include "tcp.h"
+#include "configure.h"
 
 
 CLDataHandle::CLDataHandle(int pipe_fd)
@@ -65,18 +67,71 @@ CLDataHandle::~CLDataHandle() {
 
 void CLDataHandle::do_PASV() {
     /* 随机监听一个数据端口 */
-    m_data_fd = tcp::open_listen_fd(0); /* 0代表任意选择一个端口 */
-    if (m_data_fd < 0) {
-        utility::unix_error("Cannot listen a data fd");
+    int listen_fd = 0;
+    ipc_utility::EMState state;
+    /* Create a socket descriptor */
+    if ((listen_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        state = ipc_utility::Error;
+        send_ipc_msg(&state, sizeof(state));
+        utility::unix_error("Cannot get socket");
     }
-    struct sockaddr_in local_addr{0};
-    socklen_t len = sizeof(local_addr);
-    if (getsockname(m_data_fd, (struct sockaddr *) &local_addr, &len) < 0) {
-        utility::unix_error("Get sock name error");
-    }
-    m_port = ntohs(local_addr.sin_port); /* 得到端口号 */
 
+    /* Eliminates "Address already in use" error from bind. */
+    int reuse = 1;
+    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR,
+                   (const void *) &reuse, sizeof(int)) < 0) { /* 设置端口复用 */
+        state = ipc_utility::Error;
+        send_ipc_msg(&state, sizeof(state));
+        utility::unix_error("Set socket opt error");
+    }
+
+    int port_low = configure::PASV_PORT_LOW;
+    int port_high = configure::PASV_PORT_HIGH;
+    static std::default_random_engine random_eng(time(nullptr));
+    static std::uniform_int_distribution<unsigned int> u_rand(port_low, port_high);
+    int first_port_tried = u_rand(random_eng); /* 生成指定范围内的均匀分布的随机数 */
+
+    /* Listenfd will be an endpoint for all requests to port
+    on any IP address for this host */
+    struct sockaddr_in server_addr{0};
+    bzero((char *) &server_addr, sizeof(server_addr));
+    int port = first_port_tried;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    while (true) {
+        server_addr.sin_port = htons((unsigned short) port);
+        if (bind(listen_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == 0) {
+            break;  /* 绑定成功 */
+        }
+
+        --port;
+        if (port < port_low) {
+            port = port_high;
+        }
+        if (port == first_port_tried) {
+            close(listen_fd);
+            /* 告知父进程 */
+            state = ipc_utility::PortExhausted;
+            send_ipc_msg(&state, sizeof(state));
+            return;
+        }
+    }
+    /* Make it a listening socket ready to accept connection requests */
+    if (listen(listen_fd, tcp::LISTENQ) < 0) { /* 监听 */
+        close(listen_fd);
+        state = ipc_utility::Error;
+        send_ipc_msg(&state, sizeof(state));
+        utility::unix_error("Listen error");
+        return;
+    }
+
+    m_data_fd = listen_fd;
+    m_port = port;
     get_local_ip(); /* 获得本地 IP 地址 */
+
+    state = ipc_utility::Success;
+    send_ipc_msg(&state, sizeof(state));
 
     int ip_size = m_ip_addr.size();
     send_ipc_msg(&ip_size, sizeof(ip_size));   /* 先传递长度 */
