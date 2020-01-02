@@ -11,6 +11,7 @@ namespace configure {
     const char *config_file = "config.yaml";    /* 配置文件 */
 
     std::string SERVER_LISTEN_HOST;
+    std::string FORCE_PASSIVE_SERVER_IP;
     int SERVER_LISTEN_PORT;
 
     int PORT_CONN_PORT;
@@ -58,6 +59,13 @@ namespace configure {
         if (PASV_PORT_LOW > PASV_PORT_HIGH) {
             std::cerr << "PASV port high must higher than port low" << std::endl;
             exit(EXIT_FAILURE);
+        }
+
+        if (pasv_config["force_passive_ip"].IsDefined()) {
+            FORCE_PASSIVE_SERVER_IP = pasv_config["force_passive_ip"].as<std::string>();
+            utility::debug_info(std::string("Force Server IP Address: ") + FORCE_PASSIVE_SERVER_IP);
+        } else {
+            FORCE_PASSIVE_SERVER_IP = "";
         }
 
         utility::debug_info(std::string("PASV port low: ") + std::to_string(PASV_PORT_LOW));

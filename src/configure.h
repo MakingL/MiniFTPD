@@ -11,6 +11,7 @@
 namespace configure {
     /* 配置信息 */
     extern std::string SERVER_LISTEN_HOST;
+    extern std::string FORCE_PASSIVE_SERVER_IP;
     extern  int SERVER_LISTEN_PORT;
 
     extern int PORT_CONN_PORT;

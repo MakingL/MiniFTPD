@@ -175,6 +175,11 @@ void CLDataHandle::do_get_fd() {
 }
 
 const char *CLDataHandle::get_local_ip() {
+    if (!configure::FORCE_PASSIVE_SERVER_IP.empty()) {
+        m_ip_addr = configure::FORCE_PASSIVE_SERVER_IP;
+        return m_ip_addr.c_str();
+    }
+
     if (!m_ip_addr.empty() && m_b_pasv_mode) return m_ip_addr.c_str();
 
     char ip[48] = {0};
