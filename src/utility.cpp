@@ -5,7 +5,7 @@
 #include "utility.h"
 
 namespace utility {
-    const char* get_file_perms(struct stat& sbuf) { /* 获得文件的权限 */
+    const char *get_file_perms(struct stat &sbuf) { /* 获得文件的权限 */
         static char perms[] = "----------";
         perms[0] = '?';
 
@@ -84,16 +84,16 @@ namespace utility {
         return perms;
     }
 
-    const char* get_file_date(struct stat& sbuf) {
-        static char datebuf[64] = { 0 };
-        const char* format = "%b %e %H:%M";
+    const char *get_file_date(struct stat &sbuf) {
+        static char datebuf[64] = {0};
+        const char *format = "%b %e %H:%M";
         struct timeval tv{0};
         gettimeofday(&tv, nullptr);
         time_t localTime = tv.tv_sec;
-        if (sbuf.st_mtime > localTime || (localTime - sbuf.st_mtime) > 60*60*24*182) {
+        if (sbuf.st_mtime > localTime || (localTime - sbuf.st_mtime) > 60 * 60 * 24 * 182) {
             format = "%b %e %Y";
         }
-        struct tm* p = localtime(&sbuf.st_mtime);
+        struct tm *p = localtime(&sbuf.st_mtime);
         strftime(datebuf, sizeof(datebuf), format, p); /* 将格式处理成字符串 */
         return datebuf;
     }

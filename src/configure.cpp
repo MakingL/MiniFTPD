@@ -20,7 +20,15 @@ namespace configure {
     int PASV_PORT_HIGH;
 
     void parse_config_file() {
-        YAML::Node node = YAML::LoadFile(configure::config_file);
+        YAML::Node node;
+        try {
+            node = YAML::LoadFile(configure::config_file);
+        } catch (const std::exception &e) {
+            std::cerr << "Cannot parse configure file: " << configure::config_file << ". Exception: " << e.what() << std::endl;
+            std::cerr << "Please check it for existence." << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
 
         if (!node["server"].IsDefined()) {
             std::cerr << "Server config information isn't configured correctly" << std::endl;

@@ -27,7 +27,12 @@ int main() {
     CLTCPServer tcp_server(configure::SERVER_LISTEN_HOST.c_str(), configure::SERVER_LISTEN_PORT);
     int listen_fd = tcp_server.start_listen();
 
-    tcp::get_local_ip(nullptr);
+    if (configure::FORCE_PASSIVE_SERVER_IP.empty()) {
+        if (tcp::get_local_ip(nullptr) < 0) {
+            std::cerr << " Get local IP address failed. Please configure force passive IP" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
 
     CLEpoll event_epoll(5);
     /* 通过管道统一信号源  */
