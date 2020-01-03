@@ -6,9 +6,11 @@
 #include "configure.h"
 #include "common.h"
 #include "utility.h"
+/* Cmake 生成 */
+#include "config.h"
 
 namespace configure {
-    const char *config_file = "config.yaml";    /* 配置文件 */
+    const char *config_file = CONFIG_FILE_PATH;    /* 配置文件 */
 
     std::string SERVER_LISTEN_HOST;
     std::string FORCE_PASSIVE_SERVER_IP;
