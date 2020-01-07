@@ -15,9 +15,10 @@
 
 CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
         m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false),
-        m_data_type(BINARY), m_resume_point(0) {
+        m_data_type(BINARY), m_resume_point(0), m_b_authored(false) {
 
     m_client_cmd_vec.clear();
+    m_cmd_need_auth.clear();
     memset(client_cmd_line, 0, sizeof(client_cmd_line));
 
     // 访问控制命令
@@ -51,6 +52,10 @@ CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
     m_cmd_exec_map["FEAT"] = &CLCommandHandle::do_feat;
     m_cmd_exec_map["OPTS"] = &CLCommandHandle::do_opts;
     m_cmd_exec_map["SIZE"] = &CLCommandHandle::do_size;
+
+    m_cmd_need_auth = {"CWD", "CDUP", "PORT", "PASV", "TYPE",
+                       "RNFR", "RNTO", "DELE", "RMD", "MKD",
+                       "PWD", "LIST", "NLST", "FEAT", "SIZE"};
 }
 
 CLCommandHandle::~CLCommandHandle() {
@@ -118,6 +123,7 @@ void CLCommandHandle::do_pass() {
     setegid(pw->pw_gid);
     seteuid(pw->pw_uid);
     chdir(pw->pw_dir);
+    m_b_authored = true;
     reply_client("%d Login successful.", ftp_response_code::kFTP_LOGINOK);
 }
 
@@ -671,6 +677,9 @@ void CLCommandHandle::handle() {
         utility::debug_info(std::string("User command: ") + cmd + "**");
         if (m_cmd_exec_map.count(cmd) == 0) {
             reply_client("%d Unknown command.", ftp_response_code::kFTP_BADCMD);
+        } else if (!m_b_authored && m_cmd_need_auth.count(cmd)) {
+            /* 尚未登录，且该命令需要登录后才能被执行 */
+            reply_client("%d You aren't logged in.", ftp_response_code::kFTP_LOGINERR);
         } else {
             /* 通过成员函数指针调用成员函数 */
             (this->*m_cmd_exec_map[cmd])();

@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <set>
 #include "ftp_codes.h"
 #include "buffer.h"
 #include "common.h"
@@ -109,6 +110,8 @@ private:
 
 private:
     std::unordered_map<std::string, PCommandExecutor> m_cmd_exec_map;
+    std::set<std::string> m_cmd_need_auth;
+    bool m_b_authored;
     int m_cmd_fd;
     int m_pipe_fd;
 
