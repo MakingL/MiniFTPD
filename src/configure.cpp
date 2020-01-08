@@ -21,6 +21,9 @@ namespace configure {
     int PASV_PORT_LOW;
     int PASV_PORT_HIGH;
 
+    int MAX_UPLOAD_SPEED; /* 最大上传速度 Bytes/s */
+    int MAX_DOWNLOAD_SPEED; /* 最大下载速度 Bytes/s */
+
     YAML::Node get_node(const YAML::Node &node, const std::string &node_name) { /* 获取节点 */
         if (!node[node_name.c_str()].IsDefined()) {
             std::cerr << "Configure information:" << node_name << " isn't configured correctly" << std::endl;
@@ -87,6 +90,15 @@ namespace configure {
             get_val(pasv_config, "force_passive_ip", FORCE_PASSIVE_SERVER_IP);
         }
         utility::debug_info(std::string("Force Server IP Address: ") + FORCE_PASSIVE_SERVER_IP);
+
+        auto service_config = get_node(node, "SERVICE");
+        get_val(service_config, "max_upload_speed", MAX_UPLOAD_SPEED);
+        get_val(service_config, "max_download_speed", MAX_DOWNLOAD_SPEED);
+
+        utility::debug_info(std::string("max upload speed: ") + std::to_string(MAX_UPLOAD_SPEED));
+        utility::debug_info(std::string("max download speed: ") + std::to_string(MAX_DOWNLOAD_SPEED));
+        assert(MAX_UPLOAD_SPEED > 0);
+        assert(MAX_DOWNLOAD_SPEED > 0);
     }
 
 }

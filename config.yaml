@@ -13,3 +13,6 @@ PASV:  # PASV 模式，指定该模式下可以使用的端口范围
   #   或者在网关采用动态 IP 的情况下有用
   force_passive_ip: "" # 若使用程序自动解析的 ip 地址，则填为空字符串 ""
 
+SERVICE:
+  max_upload_speed: 409600  # 上传速度, 400k Bytes/s
+  max_download_speed: 409600  # 下载速度, 400k Bytes/s

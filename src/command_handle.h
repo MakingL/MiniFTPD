@@ -128,7 +128,7 @@ private:
     EMMode m_data_type; /* 传输的数据类型 */
 
     std::string m_file_name; /* 用来记录需要重命名的文件名 */
-    static const int BYTES_PEER_TRANSFER = 1024 * 1024; /* 文件下载时每次传输的数据量 */
+    static const int BYTES_PEER_TRANSFER = 1024 * 100; /* 文件下载时每次传输的数据量：100k Bytes/s */
     long long m_resume_point;   /* 断点续传点 */
 private:
     uid_t m_uid;    /* 用户 id  */

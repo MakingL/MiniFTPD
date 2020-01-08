@@ -19,6 +19,9 @@ namespace configure {
     extern int PASV_PORT_LOW;
     extern int PASV_PORT_HIGH;
 
+    extern int MAX_UPLOAD_SPEED;
+    extern int MAX_DOWNLOAD_SPEED;
+
     void parse_config_file();   /* 从配置文件中解析配置信息 */
 
     YAML::Node get_node(const YAML::Node &node, const std::string &node_name);

@@ -12,6 +12,8 @@
 #include "record_lock.h"
 #include <unistd.h>
 #include <crypt.h>
+#include "speed_barrier.h"
+#include "configure.h"
 
 CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
         m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false),
@@ -303,12 +305,15 @@ void CLCommandHandle::do_retr() {   /* 下载文件 */
             file_size -= m_resume_point; /* 需要传送的字节的数目 */
         }
 
+        CLSpeedBarrier download_speed_barrier(configure::MAX_DOWNLOAD_SPEED);   /* 限速器 */
         while (file_size > 0) { /* 传输文件数据 */
             int sent_size = sendfile(data_connection->get_fd(), fd, nullptr, BYTES_PEER_TRANSFER); /* 每次发送一点 */
             if (sent_size == -1) {
+                utility::debug_info("Sent file failed");
                 break;
             }
             file_size -= sent_size;
+            download_speed_barrier.limit_speed(sent_size);  /* 限速 */
         }
     }
     if (file_size == 0) {
@@ -359,6 +364,7 @@ void CLCommandHandle::do_stor() {
 
         /* 读取数据,写入本地文件 */
         char buf[1024 * 1024] = {0};
+        CLSpeedBarrier upload_speed_barrier(configure::MAX_UPLOAD_SPEED);   /* 限速器 */
         while (true) {
             int res = read(data_connection->get_fd(), buf, sizeof(buf));
             if (res == -1) {
@@ -375,6 +381,7 @@ void CLCommandHandle::do_stor() {
                 state = ipc_utility::WriteError;
                 break;
             }
+            upload_speed_barrier.limit_speed(res);  /* 限速 */
         }
     }
     tcp::close_fd(fd); /* 关闭文件 */
