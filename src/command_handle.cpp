@@ -17,7 +17,7 @@
 
 CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
         m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false),
-        m_data_type(BINARY), m_resume_point(0), m_b_authored(false) {
+        m_data_type(ASCII), m_resume_point(0), m_b_authored(false) {
 
     m_client_cmd_vec.clear();
     m_cmd_need_auth.clear();
@@ -669,7 +669,7 @@ void CLCommandHandle::handle() {
             utility::debug_info("Conn't Get client command line");
             continue;
         } else {
-            utility::debug_info(std::string("Get user command: ") + client_cmd_line + "**");
+//            utility::debug_info(std::string("Get user command: ") + client_cmd_line + "**");
         }
 
         /* 解析命令 */
