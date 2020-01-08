@@ -4,6 +4,10 @@ cmake_minimum_required(VERSION 2.8.4)
 # 项目信息
 project(MiniFTPD)
 
+# 设置版本号
+set (MiniFTPD_VERSION_MAJOR 0)
+set (MiniFTPD_VERSION_MINOR 1)
+
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
