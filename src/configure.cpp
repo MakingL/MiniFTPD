@@ -21,61 +21,58 @@ namespace configure {
     int PASV_PORT_LOW;
     int PASV_PORT_HIGH;
 
+    YAML::Node get_node(const YAML::Node &node, const std::string &node_name) { /* 获取节点 */
+        if (!node[node_name.c_str()].IsDefined()) {
+            std::cerr << "Configure information:" << node_name << " isn't configured correctly" << std::endl;
+            std::cerr << "Please configure it in file: " << configure::config_file << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        return node[node_name.c_str()];;
+    }
+
+    template<typename T>
+    void get_val(const YAML::Node &node, const std::string &property, T &val) { /* 获得配置信息 */
+        if (!node[property.c_str()].IsDefined()) {
+            std::cerr << "Configure information:" << property << " isn't configured correctly" << std::endl;
+            std::cerr << "Please configure it in file: " << configure::config_file << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        val = node[property.c_str()].as<T>();;
+    }
+
     void parse_config_file() {
         YAML::Node node;
         try {
             node = YAML::LoadFile(configure::config_file);
         } catch (const std::exception &e) {
-            std::cerr << "Cannot parse configure file: " << configure::config_file << ". Exception: " << e.what() << std::endl;
+            std::cerr << "Cannot parse configure file: " << configure::config_file << ". Exception: " << e.what()
+                      << std::endl;
             std::cerr << "Please check it for existence." << std::endl;
             exit(EXIT_FAILURE);
         }
 
-
-        if (!node["server"].IsDefined()) {
-            std::cerr << "Server config information isn't configured correctly" << std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        auto server_config = node["server"];
-        SERVER_LISTEN_HOST = server_config["listen_host"].as<std::string>();
-        SERVER_LISTEN_PORT = server_config["listen_port"].as<int>();
+        auto server_config = get_node(node, "server");
+        get_val(server_config, "listen_host", SERVER_LISTEN_HOST);
+        get_val(server_config, "listen_port", SERVER_LISTEN_PORT);
 
         utility::debug_info(std::string("Server listen host: ") + SERVER_LISTEN_HOST);
         utility::debug_info(std::string("Server listen port: ") + std::to_string(SERVER_LISTEN_PORT));
         assert(!SERVER_LISTEN_HOST.empty());
         assert(SERVER_LISTEN_PORT > 0 && SERVER_LISTEN_PORT < 65536);
 
-        if (!node["PORT"].IsDefined()) {
-            std::cerr << "Server PORT config information isn't configured correctly" << std::endl;
-            exit(EXIT_FAILURE);
-        }
+        auto port_config = get_node(node, "PORT");
+        get_val(port_config, "data_connection_port", PORT_CONN_PORT);
 
-        auto port_config = node["PORT"];
-        PORT_CONN_PORT = port_config["data_connection_port"].as<int>();
         utility::debug_info(std::string("PORT data port: ") + std::to_string(PORT_CONN_PORT));
-
         assert(PORT_CONN_PORT > 0 && PORT_CONN_PORT < 65536);
 
-        if (!node["PASV"].IsDefined()) {
-            std::cerr << "Server PASV config information isn't configured correctly" << std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        auto pasv_config = node["PASV"];
-        PASV_PORT_LOW = pasv_config["port_low"].as<int>();
-        PASV_PORT_HIGH = pasv_config["port_high"].as<int>();
+        auto pasv_config = get_node(node, "PASV");
+        get_val(pasv_config, "port_low", PASV_PORT_LOW);
+        get_val(pasv_config, "port_high", PASV_PORT_HIGH);
 
         if (PASV_PORT_LOW > PASV_PORT_HIGH) {
             std::cerr << "PASV port high must higher than port low" << std::endl;
             exit(EXIT_FAILURE);
-        }
-
-        if (pasv_config["force_passive_ip"].IsDefined()) {
-            FORCE_PASSIVE_SERVER_IP = pasv_config["force_passive_ip"].as<std::string>();
-            utility::debug_info(std::string("Force Server IP Address: ") + FORCE_PASSIVE_SERVER_IP);
-        } else {
-            FORCE_PASSIVE_SERVER_IP = "";
         }
 
         utility::debug_info(std::string("PASV port low: ") + std::to_string(PASV_PORT_LOW));
@@ -83,6 +80,13 @@ namespace configure {
         assert(PASV_PORT_LOW > 0 && PASV_PORT_LOW < 65536);
         assert(PASV_PORT_HIGH > 0 && PASV_PORT_HIGH < 65536);
         assert(PASV_PORT_HIGH >= PASV_PORT_LOW);
+
+        if (pasv_config["force_passive_ip"].IsNull()) {
+            FORCE_PASSIVE_SERVER_IP = "";
+        } else {
+            get_val(pasv_config, "force_passive_ip", FORCE_PASSIVE_SERVER_IP);
+        }
+        utility::debug_info(std::string("Force Server IP Address: ") + FORCE_PASSIVE_SERVER_IP);
     }
 
 }

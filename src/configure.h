@@ -21,6 +21,10 @@ namespace configure {
 
     void parse_config_file();   /* 从配置文件中解析配置信息 */
 
+    YAML::Node get_node(const YAML::Node &node, const std::string &node_name);
+
+    template<typename T>
+    void get_val(const YAML::Node &node, const std::string &property, T &val);
 }
 
 #endif //MINIFTPD_CONFIGURE_H
