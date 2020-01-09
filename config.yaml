@@ -16,3 +16,5 @@ PASV:  # PASV 模式，指定该模式下可以使用的端口范围
 SERVICE:
   max_upload_speed: 409600  # 上传速度, 400k Bytes/s
   max_download_speed: 409600  # 下载速度, 400k Bytes/s
+  max_client: 0   # 最大支持的 client 数量，无限制请填 0
+  max_connection_per_ip: 0  # 每个 ip 最大能建立的连接数量，无限制请填 0

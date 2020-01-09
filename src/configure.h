@@ -22,6 +22,9 @@ namespace configure {
     extern int MAX_UPLOAD_SPEED;
     extern int MAX_DOWNLOAD_SPEED;
 
+    extern int MAX_CLIENT_NUM;
+    extern int MAX_CONN_PER_IP;
+
     void parse_config_file();   /* 从配置文件中解析配置信息 */
 
     YAML::Node get_node(const YAML::Node &node, const std::string &node_name);

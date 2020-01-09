@@ -24,6 +24,9 @@ namespace configure {
     int MAX_UPLOAD_SPEED; /* 最大上传速度 Bytes/s */
     int MAX_DOWNLOAD_SPEED; /* 最大下载速度 Bytes/s */
 
+    int MAX_CLIENT_NUM;     /* 最大 client 数量 */
+    int MAX_CONN_PER_IP;    /* 每个 IP 最多建立的连接数 */
+
     YAML::Node get_node(const YAML::Node &node, const std::string &node_name) { /* 获取节点 */
         if (!node[node_name.c_str()].IsDefined()) {
             std::cerr << "Configure information:" << node_name << " isn't configured correctly" << std::endl;
@@ -99,6 +102,14 @@ namespace configure {
         utility::debug_info(std::string("max download speed: ") + std::to_string(MAX_DOWNLOAD_SPEED));
         assert(MAX_UPLOAD_SPEED > 0);
         assert(MAX_DOWNLOAD_SPEED > 0);
+
+        get_val(service_config, "max_client", MAX_CLIENT_NUM);
+        get_val(service_config, "max_connection_per_ip", MAX_CONN_PER_IP);
+
+        utility::debug_info(std::string("max_client: ") + std::to_string(MAX_CLIENT_NUM));
+        utility::debug_info(std::string("max_connection_per_ip: ") + std::to_string(MAX_CONN_PER_IP));
+        assert(MAX_CLIENT_NUM >= 0);
+        assert(MAX_CONN_PER_IP >= 0);
     }
 
 }
