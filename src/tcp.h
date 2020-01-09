@@ -19,6 +19,11 @@ public:
 
     }
 
+    ~CLTCPServer() {
+        if (m_listen_fd) {
+            close(m_listen_fd);
+        }
+    }
 
     int start_listen();
 
@@ -26,6 +31,11 @@ public:
 
     bool limit_client_crowding(int connect_fd, unsigned int client_ip); /* 限流*/
     void on_a_client_exit(unsigned int client_ip);
+
+private:
+    /* 禁止复制 CLTCPServer 对象。只声明 copying 函数，不定义 */
+    CLTCPServer(const CLTCPServer&);
+    CLTCPServer &operator=(const CLTCPServer &);
 
 private:
     unsigned int m_port;

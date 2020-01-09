@@ -11,7 +11,9 @@
 
 static std::string g_local_ip;
 
-CLTCPServer::CLTCPServer(const char *host, unsigned int port) : m_port(port), m_host(host) {
+CLTCPServer::CLTCPServer(const char *host, unsigned int port) : m_port(port),
+                                                                m_host(host),
+                                                                m_listen_fd(0) {
     if ((m_listen_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
         utility::unix_error("Cannot create socket");
     }
