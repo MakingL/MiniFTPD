@@ -90,8 +90,8 @@ int main() {
                 }
 
                 if (pid == 0) {
-                    /* 父进程退出，给子进程发送 SIGKILL 信号 */
-                    prctl(PR_SET_PDEATHSIG, SIGKILL);
+                    /* 父进程退出，给子进程发送 SIGTERM 信号 */
+                    prctl(PR_SET_PDEATHSIG, SIGTERM);
                     close(listen_fd);
 
                     CLFtpHandler ftp_handler(connect_fd);
