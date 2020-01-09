@@ -6,6 +6,8 @@
 #define FTPD_TCP_H
 
 #include <string>
+#include <set>
+#include <unordered_map>
 #include "common.h"
 #include "utility.h"
 
@@ -17,14 +19,22 @@ public:
 
     }
 
+
     int start_listen();
 
     int accept_client(struct sockaddr_in &client_address);
+
+    bool limit_client_crowding(int connect_fd, unsigned int client_ip); /* 限流*/
+    void on_a_client_exit(unsigned int client_ip);
 
 private:
     unsigned int m_port;
     std::string m_host;
     int m_listen_fd;
+
+    /* 限流 */
+    std::unordered_map<unsigned int, unsigned int> m_client_ip_mapper;  /* client ip 到 连接数量的映射 */
+    std::set<unsigned int> m_client_counter;  /* 当前建立连接的 client 数量 */
 };
 
 namespace tcp {

@@ -6,6 +6,8 @@
 #include "tcp.h"
 #include "utility.h"
 #include "common.h"
+#include "configure.h"
+#include "ftp_codes.h"
 
 static std::string g_local_ip;
 
@@ -58,6 +60,36 @@ int CLTCPServer::start_listen() {
 int CLTCPServer::accept_client(struct sockaddr_in &client_address) {
     socklen_t client_addr_len = sizeof(client_address);
     return accept(m_listen_fd, (struct sockaddr *) &client_address, &client_addr_len);
+}
+
+bool CLTCPServer::limit_client_crowding(int connect_fd, unsigned int client_ip) {
+    /* 限流 */
+    if (configure::MAX_CONN_PER_IP > 0 && configure::MAX_CONN_PER_IP <= m_client_ip_mapper[client_ip]) {
+        /* 该 IP 建立的连接数过多 */
+        char buf[1024] = {0};
+        snprintf(buf, sizeof(buf), "%d There are too many connections from your address.\r\n",
+                 ftp_response_code::kFTP_IP_LIMIT);
+        tcp::send_data(connect_fd, buf, strlen(buf));
+        return true;
+    } else if (configure::MAX_CLIENT_NUM > 0 && configure::MAX_CLIENT_NUM <= m_client_counter.size()) {
+        /* 建立连接的 client 过多 */
+        char buf[1024] = {0};
+        snprintf(buf, sizeof(buf), "%d There are too many connected users, please try later.\r\n",
+                 ftp_response_code::kFTP_TOO_MANY_USERS);
+        tcp::send_data(connect_fd, buf, strlen(buf));
+        return true;
+    }
+    /* 更新计数信息*/
+    m_client_counter.insert(client_ip);
+    ++m_client_ip_mapper[client_ip];
+
+    return false;
+}
+
+void CLTCPServer::on_a_client_exit(unsigned int client_ip) {
+    if (m_client_ip_mapper[client_ip] > 0) {
+        --m_client_ip_mapper[client_ip] == 0 ? m_client_counter.erase(client_ip) : 1;
+    }
 }
 
 namespace tcp {
