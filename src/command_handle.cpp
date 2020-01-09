@@ -15,6 +15,19 @@
 #include "speed_barrier.h"
 #include "configure.h"
 
+/* 用于处理信号 */
+static CLCommandHandle *g_p_command_handler = nullptr;
+
+void CLCommandHandle::on_exit_signal(int sig) {
+    int save_errno = errno;
+    if (g_p_command_handler) {
+        g_p_command_handler->m_b_stop = true;
+    }
+    errno = save_errno;
+    /* 不立即停止，如果该进程有文件正在传输，则等到文件传输结束再结束进程 */
+//    exit(EXIT_SUCCESS);
+}
+
 CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
         m_pipe_fd(read_pipe_fd), m_cmd_fd(command_fd), m_b_stop(false),
         m_data_type(ASCII), m_resume_point(0), m_b_authored(false) {
@@ -58,6 +71,10 @@ CLCommandHandle::CLCommandHandle(int command_fd, int read_pipe_fd) :
     m_cmd_need_auth = {"CWD", "CDUP", "PORT", "PASV", "TYPE",
                        "RNFR", "RNTO", "DELE", "RMD", "MKD",
                        "PWD", "LIST", "NLST", "FEAT", "SIZE"};
+
+    g_p_command_handler = this;
+    add_signal(SIGTERM, on_exit_signal);
+    add_signal(SIGINT, on_exit_signal);
 }
 
 CLCommandHandle::~CLCommandHandle() {

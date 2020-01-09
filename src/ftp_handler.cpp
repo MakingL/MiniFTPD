@@ -24,8 +24,6 @@ void CLFtpHandler::start_handle() {
     }
 
     if (pid == 0) {
-        /* 父进程退出，给子进程发送 SIGKILL 信号 */
-        prctl(PR_SET_PDEATHSIG, SIGKILL);
         close(m_command_fd);
         /* 关闭管道读的一端 */
         close(m_p_pipe_fd[0]);

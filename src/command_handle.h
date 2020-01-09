@@ -49,6 +49,22 @@ private:
 
     inline static bool is_file_existed(const char *file_name);
 
+public:
+    static void add_signal(int sig, void(*handler)(int), bool restart=true) {
+        struct sigaction sa;
+        memset(&sa, '\0', sizeof(sa));
+        sa.sa_handler = handler;
+        if (restart) {
+            sa.sa_flags |= SA_RESTART;
+        }
+        sigfillset(&sa.sa_mask);
+        if (sigaction(sig, &sa, nullptr) == -1) {
+            utility::unix_error("Add signal error");
+        }
+    }
+
+    static void on_exit_signal(int sig);
+
 private:
     /* 访问控制命令 */
     void do_user(); /* 用户名 */

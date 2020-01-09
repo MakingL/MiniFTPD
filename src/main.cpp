@@ -53,7 +53,7 @@ int main() {
     CLSignalWrapper signal_handle;
     signal_handle.add_signal(SIGCHLD, signal_handler);
     signal_handle.add_signal(SIGTERM, signal_handler);
-    signal_handle.add_signal(SIGINT, signal_handler);
+//    signal_handle.add_signal(SIGINT, signal_handler);
     signal_handle.ignore_signal(SIGPIPE);
 
     std::unordered_map<pid_t , unsigned int> client_process_mapper;  /* client 进程到 ip 的映射 */
@@ -142,5 +142,5 @@ int main() {
             }
         }
     }
-    return 0;
+    exit(EXIT_SUCCESS);
 }
