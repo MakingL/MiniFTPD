@@ -40,8 +40,6 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 set(SEC_DIR src/)    # 源文件所在目录
 aux_source_directory(${SEC_DIR} DIR_SRCS)
 
-# 设置配置文件所在的路径
-set(CONFIGURE_FILE_PATH \"config.yaml\")
 configure_file (
         "${SEC_DIR}/config.h.in"
         "${SEC_DIR}/config.h"

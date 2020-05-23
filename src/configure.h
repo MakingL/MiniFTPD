@@ -31,6 +31,9 @@ namespace configure {
 
     template<typename T>
     void get_val(const YAML::Node &node, const std::string &property, T &val);
+
+    void show_usage();
+    bool parse_command_parameter(int argc, char *argv[]);
 }
 
 #endif //MINIFTPD_CONFIGURE_H

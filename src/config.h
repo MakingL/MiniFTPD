@@ -9,8 +9,4 @@
 #define MINIFTPD_VERSION_MAJOR 0
 #define MiniFTPD_VERSION_MINOR 1
 
-// 配置文件所在路径
-#define CONFIG_FILE_PATH "config.yaml"
-
-
 #endif //MINIFTPD_CONFIG_H

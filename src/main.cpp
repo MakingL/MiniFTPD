@@ -19,12 +19,18 @@ void signal_handler(int sig) {
     errno = save_errno;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     utility::debug_info("MiniFTPD Start");
 
     /* 必须用 root 用户启动，因为其中的用户验证部分需要特权用户才能使用 */
     if (getuid() != 0) {
         std::cerr << "MiniFTPD: must be started as root user. Please run `sudo MiniFTPD`" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (!configure::parse_command_parameter(argc, argv)) {
+        std::cout << "MiniFTPD Need a configure file.\n";
+        configure::show_usage();
         exit(EXIT_FAILURE);
     }
 

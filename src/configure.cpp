@@ -2,6 +2,8 @@
 // Created by MLee on 2019/12/31.
 //
 
+#include <iostream>
+#include <getopt.h>
 #include <cassert>
 #include "configure.h"
 #include "common.h"
@@ -9,8 +11,15 @@
 /* Cmake 生成 */
 #include "config.h"
 
+extern int optopt;
+extern char *optarg;
+static struct option long_options[] = {
+        {"conf", required_argument, NULL, 'c'},
+        {"help", no_argument,       NULL, 'h'}
+};
+
 namespace configure {
-    const char *config_file = CONFIG_FILE_PATH;    /* 配置文件 */
+    std::string config_file;
 
     std::string SERVER_LISTEN_HOST;
     std::string FORCE_PASSIVE_SERVER_IP;
@@ -110,6 +119,42 @@ namespace configure {
         utility::debug_info(std::string("max_connection_per_ip: ") + std::to_string(MAX_CONN_PER_IP));
         assert(MAX_CLIENT_NUM >= 0);
         assert(MAX_CONN_PER_IP >= 0);
+    }
+
+    void show_usage() {
+        std::cout << "\nUsage: \n"
+                  << "\t MiniFTPD -c yaml_config_file\n"
+                  << "\t MiniFTPD -h | --help\n"
+                  << "\nOptions:\n"
+                  << "\t-c | --conf \t Set configure file\n"
+                  << "\t-h | --help \t show help\n";
+    }
+
+    bool parse_command_parameter(int argc, char **argv) {
+        bool success = false;
+        int c = 0;
+        while (EOF != (c = getopt_long(argc, argv, "hc:", long_options, NULL))) {
+            switch (c) {
+                case 'c':
+                    success = true;
+                    configure::config_file = optarg;
+                    break;
+                case 'h':
+                    std::cout << "\n\tMiniFTPD, a Mini FTP server.\n";
+                    show_usage();
+                    exit(EXIT_FAILURE);
+                case '?':
+                    success = false;
+                    std::cout << "\nUnknown option: " << optopt << "\n";
+                    break;
+                default:
+                    success = false;
+                    std::cerr << "Unprocessed option: " << optopt << "\n";
+                    break;
+            }
+        }
+
+        return success;
     }
 
 }
