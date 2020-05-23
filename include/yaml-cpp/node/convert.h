@@ -8,10 +8,12 @@
 #endif
 
 #include <array>
+#include <cmath>
 #include <limits>
 #include <list>
 #include <map>
 #include <sstream>
+#include <type_traits>
 #include <vector>
 
 #include "yaml-cpp/binary.h"
@@ -20,6 +22,7 @@
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/node/type.h"
 #include "yaml-cpp/null.h"
+
 
 namespace YAML {
 class Binary;
@@ -88,13 +91,38 @@ struct convert<_Null> {
   }
 };
 
+namespace conversion {
+template <typename T>
+typename std::enable_if< std::is_floating_point<T>::value, void>::type
+inner_encode(const T& rhs, std::stringstream& stream){
+  if (std::isnan(rhs)) {
+    stream << ".nan";
+  } else if (std::isinf(rhs)) {
+    if (std::signbit(rhs)) {
+      stream << "-.inf";
+    } else {
+      stream << ".inf";
+    }
+  } else {
+    stream << rhs;
+  }
+}
+
+template <typename T>
+typename std::enable_if<!std::is_floating_point<T>::value, void>::type
+inner_encode(const T& rhs, std::stringstream& stream){
+  stream << rhs;
+}
+}
+
 #define YAML_DEFINE_CONVERT_STREAMABLE(type, negative_op)                  \
   template <>                                                              \
   struct convert<type> {                                                   \
+                                                                           \
     static Node encode(const type& rhs) {                                  \
       std::stringstream stream;                                            \
       stream.precision(std::numeric_limits<type>::max_digits10);           \
-      stream << rhs;                                                       \
+      conversion::inner_encode(rhs, stream);                               \
       return Node(stream.str());                                           \
     }                                                                      \
                                                                            \
@@ -165,17 +193,17 @@ struct convert<bool> {
 };
 
 // std::map
-template <typename K, typename V>
-struct convert<std::map<K, V>> {
-  static Node encode(const std::map<K, V>& rhs) {
+template <typename K, typename V, typename C, typename A>
+struct convert<std::map<K, V, C, A>> {
+  static Node encode(const std::map<K, V, C, A>& rhs) {
     Node node(NodeType::Map);
-    for (typename std::map<K, V>::const_iterator it = rhs.begin();
+    for (typename std::map<K, V, C, A>::const_iterator it = rhs.begin();
          it != rhs.end(); ++it)
       node.force_insert(it->first, it->second);
     return node;
   }
 
-  static bool decode(const Node& node, std::map<K, V>& rhs) {
+  static bool decode(const Node& node, std::map<K, V, C, A>& rhs) {
     if (!node.IsMap())
       return false;
 
@@ -192,17 +220,17 @@ struct convert<std::map<K, V>> {
 };
 
 // std::vector
-template <typename T>
-struct convert<std::vector<T>> {
-  static Node encode(const std::vector<T>& rhs) {
+template <typename T, typename A>
+struct convert<std::vector<T, A>> {
+  static Node encode(const std::vector<T, A>& rhs) {
     Node node(NodeType::Sequence);
-    for (typename std::vector<T>::const_iterator it = rhs.begin();
+    for (typename std::vector<T, A>::const_iterator it = rhs.begin();
          it != rhs.end(); ++it)
       node.push_back(*it);
     return node;
   }
 
-  static bool decode(const Node& node, std::vector<T>& rhs) {
+  static bool decode(const Node& node, std::vector<T, A>& rhs) {
     if (!node.IsSequence())
       return false;
 
@@ -219,17 +247,17 @@ struct convert<std::vector<T>> {
 };
 
 // std::list
-template <typename T>
-struct convert<std::list<T>> {
-  static Node encode(const std::list<T>& rhs) {
+template <typename T, typename A>
+struct convert<std::list<T,A>> {
+  static Node encode(const std::list<T,A>& rhs) {
     Node node(NodeType::Sequence);
-    for (typename std::list<T>::const_iterator it = rhs.begin();
+    for (typename std::list<T,A>::const_iterator it = rhs.begin();
          it != rhs.end(); ++it)
       node.push_back(*it);
     return node;
   }
 
-  static bool decode(const Node& node, std::list<T>& rhs) {
+  static bool decode(const Node& node, std::list<T,A>& rhs) {
     if (!node.IsSequence())
       return false;
 
