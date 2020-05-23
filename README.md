@@ -33,7 +33,7 @@
 1. 在当前目录下，cmake 构建 makefile，执行命令: `cmake ./`
 2. 编译构建: `make`，此时当前目录下生成可执行文件 `MiniFTPD`
 3. 按需求设置配置文件 `config.yaml` 中的选项
-4. 运行程序: `sudo ./MiniFTPD`
+4. 运行程序: `sudo ./MiniFTPD -c config.yaml` (其中的 `config.yaml` 按照需求自行替换)
 5. 若主机打开的有防火墙，请确保配置文件中用到的端口已在防火墙中打开
 6. 客户端连接到此服务器，
     - ftp 客户端连接此服务器，默认的端口 2222
@@ -45,7 +45,7 @@
         ```plain
         cmake ./
         make
-        sudo ./MiniFTPD
+        sudo ./MiniFTPD -c config.yaml
         ```
 
     - 本地 FTP 客户端连接到服务器
